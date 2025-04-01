@@ -355,6 +355,15 @@ struct VRM4U_API FVRMConstraint {
 	FVRMConstraintRotation constraintRotation;
 };
 
+UENUM(BlueprintType)
+enum class EVrmSkeletonType : uint8
+{
+	Auto UMETA(DisplayName = "Auto Detect"),
+	VRM UMETA(DisplayName = "VRM/VRoid"),
+	Mixamo UMETA(DisplayName = "Mixamo"),
+	MetaHuman UMETA(DisplayName = "MetaHuman"),
+	DAZ UMETA(DisplayName = "DAZ")
+};
 
 UCLASS(Blueprintable, BlueprintType)
 class VRM4U_API UVrmMetaObject : public UObject
@@ -369,6 +378,9 @@ public:
 	int GetVRMVersion() const {
 		return Version;
 	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	EVrmSkeletonType SkeletonType = EVrmSkeletonType::Auto;
 
 	// humanoid name -> model name
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
