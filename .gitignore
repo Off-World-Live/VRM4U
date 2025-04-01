@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+/Binaries/
+/Intermediate/
+*.dll
+*.exp
+*.pdb

@@ -9,30 +9,45 @@ public class VRM4UCaptureEditor : ModuleRules
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PrivateDependencyModuleNames.AddRange(
-			new string[] {
-				"Core",
-				"CoreUObject",
-                "Engine",
+	        new string[] {
+		        "Core",
+		        "CoreUObject",
+		        "Engine",
 
-				"AnimGraphRuntime",
-				"AnimGraph",
-				"BlueprintGraph",
+		        "AnimGraphRuntime",
+		        "AnimGraph",
+		        "BlueprintGraph",
 
-				"UnrealEd",
-				"AnimationEditMode",
-				"Persona",
+		        "UnrealEd",
+		        "AnimationEditMode",
+		        "Persona",
 
-				"VRM4U",
-				"VRM4UCapture",
-			});
+		        "VRM4U",
+		        "VRM4UCapture", 
+		        "EditorStyle",
+             
+		        // dependencies for the editor extension
+		        "Slate",
+		        "SlateCore",
+		        "ContentBrowser",
+		        "ApplicationCore",
+		        "InputCore",
+		        "AssetRegistry",
+		        "AssetTools",
+		        "PropertyEditor",
+		        "EditorFramework",
+		        "ToolMenus",
+		        "AppFramework",
+	        });
 
-		PrivateIncludePathModuleNames.AddRange(
-			new string[] {
-            });
+        PrivateIncludePathModuleNames.AddRange(
+	        new string[] {
+		        // Include paths only
+	        });
 
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[] {
-			});
+        DynamicallyLoadedModuleNames.AddRange(
+	        new string[] {
+	        });
 
         PrivateIncludePaths.AddRange(
         new string[] {
