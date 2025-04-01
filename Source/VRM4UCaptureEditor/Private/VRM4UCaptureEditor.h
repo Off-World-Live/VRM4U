@@ -3,6 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-//#include "VRMImporterModule.h"
+#include "Modules/ModuleInterface.h"
 
-
+class FVRM4UCaptureEditorModule : public IModuleInterface
+{
+public:
+	/** IModuleInterface implementation */
+	virtual void StartupModule() override;
+	virtual void ShutdownModule() override;
+};

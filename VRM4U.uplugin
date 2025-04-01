@@ -3,7 +3,7 @@
   "Version": 1,
   "VersionName": "1.0",
   "FriendlyName": "VRM4U",
-  "Description": "VRM importer and runtime loader for UE4",
+  "Description": "VRM importer and runtime loader for UE5",
   "Category": "Rendering",
   "CreatedBy": "ruyo",
   "CreatedByURL": "ruyo",
