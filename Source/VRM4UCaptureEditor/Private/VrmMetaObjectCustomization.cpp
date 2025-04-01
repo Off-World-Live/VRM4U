@@ -37,9 +37,29 @@ void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
         return;
     }
     
-    // Add a custom row with auto-populate button to the Rendering category
+    // Get category for rendering
     IDetailCategoryBuilder& RenderingCategory = DetailBuilder.EditCategory("Rendering", FText::GetEmpty(), ECategoryPriority::Important);
     
+    // Hide all properties we want to manually reorder
+    DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, Version));
+    DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, SkeletonType));
+    DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, SkeletalMesh));
+    
+    // Create new ordered custom rows
+    
+    // 1. Version
+    TSharedRef<IPropertyHandle> VersionProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, Version));
+    RenderingCategory.AddProperty(VersionProperty);
+    
+    // 2. Skeletal Mesh
+    TSharedRef<IPropertyHandle> SkeletalMeshProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, SkeletalMesh));
+    RenderingCategory.AddProperty(SkeletalMeshProperty);
+    
+    // 3. Skeleton Type
+    TSharedRef<IPropertyHandle> SkeletonTypeProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, SkeletonType));
+    RenderingCategory.AddProperty(SkeletonTypeProperty);
+    
+    // 4. Auto-Populate Button
     RenderingCategory.AddCustomRow(LOCTEXT("AutoPopulateRow", "Auto Populate"))
         .NameContent()
         [
@@ -54,9 +74,13 @@ void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
             SNew(SButton)
             .ContentPadding(FMargin(5.0f, 2.0f))
             .Text(LOCTEXT("AutoPopulateButton", "Auto-Populate"))
-            .ToolTipText(LOCTEXT("AutoPopulateButtonTooltip", "Automatically populate bone mappings based on the detected skeleton type"))
+            .ToolTipText(LOCTEXT("AutoPopulateButtonTooltip", "Automatically populate bone mappings based on the selected or detected skeleton type"))
             .OnClicked(FOnClicked::CreateRaw(this, &FVrmMetaObjectCustomization::OnAutoPopulateClicked, MetaObject))
         ];
+    
+    // Ensure the humanoidBoneTable property appears after our auto-populate button
+    TSharedRef<IPropertyHandle> HumanoidBoneTableProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVrmMetaObject, humanoidBoneTable));
+    RenderingCategory.AddProperty(HumanoidBoneTableProperty);
 }
 
 FReply FVrmMetaObjectCustomization::OnAutoPopulateClicked(UVrmMetaObject* MetaObject)
@@ -71,25 +95,27 @@ FReply FVrmMetaObjectCustomization::OnAutoPopulateClicked(UVrmMetaObject* MetaOb
         return FReply::Handled();
     }
     
-    ESkeletonType SkeletonType = UAutoPopulateVrmMeta::DetectSkeletonType(MetaObject->SkeletalMesh);
+    // Determine skeleton type (either from user selection or auto-detection)
+    ESkeletonType DetectedType = ESkeletonType::Unknown;
+    FString TypeName;
     
-    if (SkeletonType == ESkeletonType::Unknown)
+    if (MetaObject->SkeletonType == EVrmSkeletonType::Auto)
     {
-        // Show error notification
-        FNotificationInfo Info(LOCTEXT("UnknownSkeleton", "Error: Could not detect skeleton type"));
-        Info.bUseLargeFont = false;
-        Info.ExpireDuration = 5.0f;
-        FSlateNotificationManager::Get().AddNotification(Info);
-        return FReply::Handled();
-    }
-    
-    bool bSuccess = UAutoPopulateVrmMeta::AutoPopulateMetaObject(MetaObject, MetaObject->SkeletalMesh);
-    
-    if (bSuccess)
-    {
-        // Show success notification
-        FString TypeName;
-        switch (SkeletonType)
+        // Auto detect
+        DetectedType = UAutoPopulateVrmMeta::DetectSkeletonType(MetaObject->SkeletalMesh);
+        
+        if (DetectedType == ESkeletonType::Unknown)
+        {
+            // Show error notification
+            FNotificationInfo Info(LOCTEXT("UnknownSkeleton", "Error: Could not auto-detect skeleton type"));
+            Info.bUseLargeFont = false;
+            Info.ExpireDuration = 5.0f;
+            FSlateNotificationManager::Get().AddNotification(Info);
+            return FReply::Handled();
+        }
+        
+        // Set type name based on detected type
+        switch (DetectedType)
         {
         case ESkeletonType::Mixamo: TypeName = "Mixamo"; break;
         case ESkeletonType::MetaHuman: TypeName = "MetaHuman"; break;
@@ -97,11 +123,52 @@ FReply FVrmMetaObjectCustomization::OnAutoPopulateClicked(UVrmMetaObject* MetaOb
         case ESkeletonType::VRM: TypeName = "VRM"; break;
         default: TypeName = "Unknown"; break;
         }
+    }
+    else
+    {
+        // User explicitly selected a type
+        switch (MetaObject->SkeletonType)
+        {
+        case EVrmSkeletonType::VRM:
+            TypeName = "VRM";
+            break;
+        case EVrmSkeletonType::Mixamo:
+            TypeName = "Mixamo";
+            break;
+        case EVrmSkeletonType::MetaHuman:
+            TypeName = "MetaHuman";
+            break;
+        case EVrmSkeletonType::DAZ:
+            TypeName = "DAZ";
+            break;
+        default:
+            TypeName = "Unknown";
+            break;
+        }
+    }
+    
+    bool bSuccess = UAutoPopulateVrmMeta::AutoPopulateMetaObject(MetaObject, MetaObject->SkeletalMesh);
+    
+    if (bSuccess)
+    {
+        // Show success notification with appropriate message
+        FText SuccessMessage;
+        if (MetaObject->SkeletonType == EVrmSkeletonType::Auto)
+        {
+            SuccessMessage = FText::Format(
+                LOCTEXT("SuccessfullyPopulatedAutoDetect", "Successfully populated bone mappings for auto-detected {0} skeleton"),
+                FText::FromString(TypeName)
+            );
+        }
+        else
+        {
+            SuccessMessage = FText::Format(
+                LOCTEXT("SuccessfullyPopulatedSelected", "Successfully populated bone mappings for {0} skeleton"),
+                FText::FromString(TypeName)
+            );
+        }
         
-        FNotificationInfo Info(FText::Format(
-            LOCTEXT("SuccessfullyPopulated", "Successfully populated bone mappings for {0} skeleton"),
-            FText::FromString(TypeName)
-        ));
+        FNotificationInfo Info(SuccessMessage);
         Info.bUseLargeFont = false;
         Info.ExpireDuration = 5.0f;
         FSlateNotificationManager::Get().AddNotification(Info);
