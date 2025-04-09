@@ -256,7 +256,7 @@ public:
 #if WITH_EDITOR
 
 
-	virtual void GetAssetRegistryTags(TArray<FAssetRegistryTag>& OutTags) const override;
+	virtual void GetAssetRegistryTags(FAssetRegistryTagsContext Context) const override;
 	// Import data for this 
 	void WaitUntilAsyncPropertyReleased() const;
 
