@@ -829,87 +829,229 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 {
 	if (!InMetaObject)
 	{
+		UE_LOG(LogTemp, Error, TEXT("PopulateForDAZ: Null meta object"));
+		return false;
+	}
+
+	if (!InSkeletalMesh)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PopulateForDAZ: Null skeletal mesh"));
 		return false;
 	}
 
 	// Clear existing mappings
 	InMetaObject->humanoidBoneTable.Empty();
 
-	// Add DAZ bone mappings - these names may need to be adjusted based on your specific DAZ export settings
-	// Main body
-	InMetaObject->humanoidBoneTable.Add(TEXT("hips"), TEXT("hip"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("spine"), TEXT("abdomen"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("chest"), TEXT("chest"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("neck"), TEXT("neck"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("head"), TEXT("head"));
+	// Get skeleton to find available bones
+	USkeleton* Skeleton = VRMGetSkeleton(InSkeletalMesh);
+	if (!Skeleton)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PopulateForDAZ: Could not get skeleton"));
+		return false;
+	}
 
-	// Left arm
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftShoulder"), TEXT("lCollar"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftUpperArm"), TEXT("lShldr"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftLowerArm"), TEXT("lForeArm"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftHand"), TEXT("lHand"));
+	const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+	TSet<FName> AvailableBones;
+	for (int32 i = 0; i < RefSkeleton.GetNum(); ++i)
+	{
+		AvailableBones.Add(RefSkeleton.GetBoneName(i));
+	}
+	
+	UE_LOG(LogTemp, Log, TEXT("DAZ mapping: Found %d bones in skeleton"), AvailableBones.Num());
 
-	// Right arm
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightShoulder"), TEXT("rCollar"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightUpperArm"), TEXT("rShldr"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightLowerArm"), TEXT("rForeArm"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightHand"), TEXT("rHand"));
+	// Define all expected DAZ bone mappings with critical flags
+	struct FBoneMapEntry
+	{
+		FString HumanoidName;
+		FString DAZName;
+		bool bIsCritical; // Is this bone critical for the animation to work properly?
+	};
 
-	// Left leg
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftUpperLeg"), TEXT("lThigh"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftLowerLeg"), TEXT("lShin"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftFoot"), TEXT("lFoot"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftToes"), TEXT("lToe"));
+	TArray<FBoneMapEntry> BoneMap = {
+		// Main body - critical bones
+		{TEXT("hips"), TEXT("hip"), true},
+		{TEXT("spine"), TEXT("abdomen"), true},
+		{TEXT("chest"), TEXT("chest"), true},
+		{TEXT("neck"), TEXT("neck"), true},
+		{TEXT("head"), TEXT("head"), true},
 
-	// Right leg
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightUpperLeg"), TEXT("rThigh"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightLowerLeg"), TEXT("rShin"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightFoot"), TEXT("rFoot"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightToes"), TEXT("rToe"));
+		// Left arm - critical bones
+		{TEXT("leftShoulder"), TEXT("lCollar"), true},
+		{TEXT("leftUpperArm"), TEXT("lShldr"), true},
+		{TEXT("leftLowerArm"), TEXT("lForeArm"), true},
+		{TEXT("leftHand"), TEXT("lHand"), true},
 
-	// Left fingers
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftThumbProximal"), TEXT("lThumb1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftThumbIntermediate"), TEXT("lThumb2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftThumbDistal"), TEXT("lThumb3"));
+		// Right arm - critical bones
+		{TEXT("rightShoulder"), TEXT("rCollar"), true},
+		{TEXT("rightUpperArm"), TEXT("rShldr"), true},
+		{TEXT("rightLowerArm"), TEXT("rForeArm"), true},
+		{TEXT("rightHand"), TEXT("rHand"), true},
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftIndexProximal"), TEXT("lIndex1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftIndexIntermediate"), TEXT("lIndex2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftIndexDistal"), TEXT("lIndex3"));
+		// Left leg - critical bones
+		{TEXT("leftUpperLeg"), TEXT("lThigh"), true},
+		{TEXT("leftLowerLeg"), TEXT("lShin"), true},
+		{TEXT("leftFoot"), TEXT("lFoot"), true},
+		{TEXT("leftToes"), TEXT("lToe"), false},
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftMiddleProximal"), TEXT("lMid1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftMiddleIntermediate"), TEXT("lMid2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftMiddleDistal"), TEXT("lMid3"));
+		// Right leg - critical bones
+		{TEXT("rightUpperLeg"), TEXT("rThigh"), true},
+		{TEXT("rightLowerLeg"), TEXT("rShin"), true},
+		{TEXT("rightFoot"), TEXT("rFoot"), true},
+		{TEXT("rightToes"), TEXT("rToe"), false},
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftRingProximal"), TEXT("lRing1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftRingIntermediate"), TEXT("lRing2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftRingDistal"), TEXT("lRing3"));
+		// Left fingers - non-critical bones
+		{TEXT("leftThumbProximal"), TEXT("lThumb1"), false},
+		{TEXT("leftThumbIntermediate"), TEXT("lThumb2"), false},
+		{TEXT("leftThumbDistal"), TEXT("lThumb3"), false},
+		{TEXT("leftIndexProximal"), TEXT("lIndex1"), false},
+		{TEXT("leftIndexIntermediate"), TEXT("lIndex2"), false},
+		{TEXT("leftIndexDistal"), TEXT("lIndex3"), false},
+		{TEXT("leftMiddleProximal"), TEXT("lMid1"), false},
+		{TEXT("leftMiddleIntermediate"), TEXT("lMid2"), false},
+		{TEXT("leftMiddleDistal"), TEXT("lMid3"), false},
+		{TEXT("leftRingProximal"), TEXT("lRing1"), false},
+		{TEXT("leftRingIntermediate"), TEXT("lRing2"), false},
+		{TEXT("leftRingDistal"), TEXT("lRing3"), false},
+		{TEXT("leftLittleProximal"), TEXT("lPinky1"), false},
+		{TEXT("leftLittleIntermediate"), TEXT("lPinky2"), false},
+		{TEXT("leftLittleDistal"), TEXT("lPinky3"), false},
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftLittleProximal"), TEXT("lPinky1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftLittleIntermediate"), TEXT("lPinky2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("leftLittleDistal"), TEXT("lPinky3"));
+		// Right fingers - non-critical bones
+		{TEXT("rightThumbProximal"), TEXT("rThumb1"), false},
+		{TEXT("rightThumbIntermediate"), TEXT("rThumb2"), false},
+		{TEXT("rightThumbDistal"), TEXT("rThumb3"), false},
+		{TEXT("rightIndexProximal"), TEXT("rIndex1"), false},
+		{TEXT("rightIndexIntermediate"), TEXT("rIndex2"), false},
+		{TEXT("rightIndexDistal"), TEXT("rIndex3"), false},
+		{TEXT("rightMiddleProximal"), TEXT("rMid1"), false},
+		{TEXT("rightMiddleIntermediate"), TEXT("rMid2"), false},
+		{TEXT("rightMiddleDistal"), TEXT("rMid3"), false},
+		{TEXT("rightRingProximal"), TEXT("rRing1"), false},
+		{TEXT("rightRingIntermediate"), TEXT("rRing2"), false},
+		{TEXT("rightRingDistal"), TEXT("rRing3"), false},
+		{TEXT("rightLittleProximal"), TEXT("rPinky1"), false},
+		{TEXT("rightLittleIntermediate"), TEXT("rPinky2"), false},
+		{TEXT("rightLittleDistal"), TEXT("rPinky3"), false},
+		
+		// Eyes - non-critical bones
+		{TEXT("leftEye"), TEXT("lEye"), false},
+		{TEXT("rightEye"), TEXT("rEye"), false},
+	};
 
-	// Right fingers
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightThumbProximal"), TEXT("rThumb1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightThumbIntermediate"), TEXT("rThumb2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightThumbDistal"), TEXT("rThumb3"));
+	// Track mapping statistics
+	int32 TotalMapped = 0;
+	int32 TotalCritical = 0;
+	int32 MappedCritical = 0;
+	TArray<FString> MissingCriticalBones;
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightIndexProximal"), TEXT("rIndex1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightIndexIntermediate"), TEXT("rIndex2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightIndexDistal"), TEXT("rIndex3"));
+	// Process each bone mapping
+	for (const FBoneMapEntry& Entry : BoneMap)
+	{
+		if (Entry.bIsCritical)
+		{
+			TotalCritical++;
+		}
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightMiddleProximal"), TEXT("rMid1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightMiddleIntermediate"), TEXT("rMid2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightMiddleDistal"), TEXT("rMid3"));
+		if (AvailableBones.Contains(*Entry.DAZName))
+		{
+			InMetaObject->humanoidBoneTable.Add(Entry.HumanoidName, Entry.DAZName);
+			TotalMapped++;
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightRingProximal"), TEXT("rRing1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightRingIntermediate"), TEXT("rRing2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightRingDistal"), TEXT("rRing3"));
+			if (Entry.bIsCritical)
+			{
+				MappedCritical++;
+			}
+		}
+		else if (Entry.bIsCritical)
+		{
+			MissingCriticalBones.Add(Entry.HumanoidName + TEXT(" (") + Entry.DAZName + TEXT(")"));
+		}
+	}
 
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightLittleProximal"), TEXT("rPinky1"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightLittleIntermediate"), TEXT("rPinky2"));
-	InMetaObject->humanoidBoneTable.Add(TEXT("rightLittleDistal"), TEXT("rPinky3"));
+	// Check for alternative bone naming that some DAZ exports might use
+	if (TotalMapped < TotalCritical / 2)
+	{
+		UE_LOG(LogTemp, Log, TEXT("DAZ mapping: Standard DAZ naming convention failed, trying alternative naming"));
+		
+		// Define alternative naming mappings for DAZ exports that might use different conventions
+		TArray<TPair<FString, FString>> AlternativeNamings = {
+			// Alternative naming for main body
+			{TEXT("hip"), TEXT("pelvis")},
+			{TEXT("abdomen"), TEXT("spine")},
+			{TEXT("chest"), TEXT("chest1")},
+			
+			// Alternative naming for arms
+			{TEXT("lCollar"), TEXT("l_clavicle")},
+			{TEXT("rCollar"), TEXT("r_clavicle")},
+			{TEXT("lShldr"), TEXT("l_upperarm")},
+			{TEXT("rShldr"), TEXT("r_upperarm")},
+			{TEXT("lForeArm"), TEXT("l_forearm")},
+			{TEXT("rForeArm"), TEXT("r_forearm")},
+			
+			// Alternative naming for legs
+			{TEXT("lThigh"), TEXT("l_thigh")},
+			{TEXT("rThigh"), TEXT("r_thigh")},
+			{TEXT("lShin"), TEXT("l_calf")},
+			{TEXT("rShin"), TEXT("r_calf")},
+		};
+		
+		// Try each alternative naming
+		for (const TPair<FString, FString>& Alternative : AlternativeNamings)
+		{
+			for (const FBoneMapEntry& Entry : BoneMap)
+			{
+				// Skip if already mapped
+				if (InMetaObject->humanoidBoneTable.Contains(Entry.HumanoidName))
+				{
+					continue;
+				}
+				
+				// Check if this entry matches the current alternative
+				if (Entry.DAZName == Alternative.Key && AvailableBones.Contains(*Alternative.Value))
+				{
+					InMetaObject->humanoidBoneTable.Add(Entry.HumanoidName, Alternative.Value);
+					TotalMapped++;
+					
+					if (Entry.bIsCritical)
+					{
+						// Update tracking for critical bones
+						MappedCritical++;
+						// Remove from missing list if it was there
+						MissingCriticalBones.Remove(Entry.HumanoidName + TEXT(" (") + Entry.DAZName + TEXT(")"));
+					}
+					
+					UE_LOG(LogTemp, Log, TEXT("Applied alternative DAZ mapping: %s -> %s (instead of %s)"), 
+						*Entry.HumanoidName, *Alternative.Value, *Entry.DAZName);
+				}
+			}
+		}
+	}
 
-	return true;
+	// Log mapping results
+	UE_LOG(LogTemp, Log, TEXT("DAZ mapping: Successfully mapped %d of %d bones (%d of %d critical bones)"),
+			TotalMapped, BoneMap.Num(), MappedCritical, TotalCritical);
+
+	if (MissingCriticalBones.Num() > 0)
+	{
+		FString MissingBonesStr = FString::Join(MissingCriticalBones, TEXT(", "));
+		UE_LOG(LogTemp, Warning, TEXT("Missing critical bones: %s"), *MissingBonesStr);
+	}
+
+	// Return success if all critical bones were mapped, or at least some bones were mapped
+	if (MappedCritical == TotalCritical)
+	{
+		UE_LOG(LogTemp, Log, TEXT("DAZ mapping: All critical bones mapped successfully"));
+		return true;
+	}
+	else if (TotalMapped > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DAZ mapping: Some critical bones could not be mapped (%d/%d)"), 
+			  MappedCritical, TotalCritical);
+		return true;
+	}
+	
+	UE_LOG(LogTemp, Error, TEXT("DAZ mapping: Failed to map any bones"));
+	return false;
 }
 
 bool UAutoPopulateVrmMeta::ApplyCustomBoneOverrides(UVrmMetaObject* InMetaObject, USkeletalMesh* InSkeletalMesh)
