@@ -1771,7 +1771,10 @@ bool UVrmBPFunctionLibrary::VRMBakeAnim(const USkeletalMeshComponent* skc, const
 #else
 		ase->GetController().SetNumberOfFrames(ase->GetController().ConvertSecondsToFrameNumber(totalTime));
 		//ase->MarkRawDataAsModified();
-		ase->SetUseRawDataOnly(true);
+    
+		// For UE 5.2+, we need to use a different approach instead of SetUseRawDataOnly
+		// The following is the new approach to flag raw data usage
+		ase->CompressedData.CompressedDataStructure = nullptr;
 		ase->FlagDependentAnimationsAsRawDataOnly();
 		ase->UpdateDependentStreamingAnimations();
 #endif

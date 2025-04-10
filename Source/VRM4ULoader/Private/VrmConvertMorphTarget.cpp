@@ -361,34 +361,69 @@ bool VRMConverter::ConvertMorphTarget(UVrmAssetListObject *vrmAssetList) {
 
 #if WITH_EDITOR
 
-#if	UE_VERSION_OLDER_THAN(4,25,0)
+#if UE_VERSION_OLDER_THAN(4,25,0)
+// Original code for UE 4.24 and earlier
 #else
-	// to avoid no morph target
-	// on Immediate
-	VRMSetUseLegacyMeshDerivedDataKey(sk, true);
+    #if UE_VERSION_OLDER_THAN(5,4,0)
+        // Code for UE 4.25-5.3
+        // to avoid no morph target
+        // on Immediate
+        VRMSetUseLegacyMeshDerivedDataKey(sk, true);
 
-	FSkeletalMeshImportData RawMesh;
-	sk->LoadLODImportedData(0, RawMesh);
+        FSkeletalMeshImportData RawMesh;
+        sk->LoadLODImportedData(0, RawMesh);
 
-	RawMesh.MorphTargetNames = MorphNameList;
+        RawMesh.MorphTargetNames = MorphNameList;
 
-	// to avoid no morph target
-	// on EditorRestart
-	sk->SaveLODImportedData(0, RawMesh);
+        // to avoid no morph target
+        // on EditorRestart
+        sk->SaveLODImportedData(0, RawMesh);
 
-	sk->SetLODImportedDataVersions(0, ESkeletalMeshGeoImportVersions::Before_Versionning, ESkeletalMeshSkinningImportVersions::Before_Versionning);
+        sk->SetLODImportedDataVersions(0, ESkeletalMeshGeoImportVersions::Before_Versionning, ESkeletalMeshSkinningImportVersions::Before_Versionning);
+    #else
+        // Code for UE 5.4+
+        // Use Mesh Description API instead of deprecated import data functions
+        VRMSetUseLegacyMeshDerivedDataKey(sk, true);
+        
+        // Get the mesh description if it exists
+        if (sk->HasMeshDescription(0))
+        {
+            FMeshDescription* MeshDesc = sk->GetMeshDescription(0);
+        	if (MeshDesc)
+        	{
+        		// Create morph targets based on the morph name list
+        		for (const FString& MorphName : MorphNameList)
+        		{
+        			// Find or create a morph target with this name
+        			UMorphTarget* MorphTarget = sk->FindMorphTarget(*MorphName);
+        			if (!MorphTarget)
+        			{
+        				// Create a new morph target
+        				MorphTarget = NewObject<UMorphTarget>(sk, *MorphName);
+        				sk->RegisterMorphTarget(MorphTarget);
+        			}
+        		}
+            
+        		// Commit any changes made to the mesh description - using the correct type
+        		USkeletalMesh::FCommitMeshDescriptionParams Params;
+        		Params.bUpdateMorphTargets = true;
+        		Params.bMarkPackageDirty = true;
+        		sk->CommitMeshDescription(0, Params);
+            }
+        }
+    #endif // UE_VERSION_OLDER_THAN(5,4,0)
+#endif // UE_VERSION_OLDER_THAN(4,25,0)
 
-#endif
-#endif // editor
-#if	UE_VERSION_OLDER_THAN(5,0,0)
+#if UE_VERSION_OLDER_THAN(5,0,0)
+// Original code for UE 4.x
 #else
-	{
-		FSkeletalMeshLODInfo* LODInfoPtr = sk->GetLODInfo(0);
-		if (LODInfoPtr) {
-			LODInfoPtr->ReductionSettings.NumOfTrianglesPercentage = 1.f;
-		}
-	}
-#endif
+    {
+       FSkeletalMeshLODInfo* LODInfoPtr = sk->GetLODInfo(0);
+       if (LODInfoPtr) {
+          LODInfoPtr->ReductionSettings.NumOfTrianglesPercentage = 1.f;
+       }
+    }
+#endif // UE_VERSION_OLDER_THAN(5,0,0)
 
 	{
 		// remove all morph & morph curve
@@ -408,8 +443,8 @@ bool VRMConverter::ConvertMorphTarget(UVrmAssetListObject *vrmAssetList) {
 				}
 			}
 		}
-#endif
-#endif
+#endif // UE_VERSION_OLDER_THAN(5,3,0)
+#endif // WITH_EDITOR nested within the morph curve block
 	}
 
 	for (int i=0; i<MorphTargetList.Num(); ++i){
@@ -433,7 +468,7 @@ bool VRMConverter::ConvertMorphTarget(UVrmAssetListObject *vrmAssetList) {
 
 #if WITH_EDITOR
 	sk->PostEditChange();
-#else
+#else // This #else matches the outer WITH_EDITOR that began this section
 
 #if	UE_VERSION_OLDER_THAN(4,24,0)
 #else
@@ -447,7 +482,7 @@ bool VRMConverter::ConvertMorphTarget(UVrmAssetListObject *vrmAssetList) {
 					RenderSection.DuplicatedVerticesBuffer.DupVertData.SetNum(1);
 				}
 			}
-#endif
+#endif // UE_VERSION_OLDER_THAN(5,0,0)
 
 #if	UE_VERSION_OLDER_THAN(5,4,0)
 			sk->GetResourceForRendering()->LODRenderData[0].InitResources(false, 0, VRMGetMorphTargets(sk), sk);
@@ -459,15 +494,16 @@ bool VRMConverter::ConvertMorphTarget(UVrmAssetListObject *vrmAssetList) {
 				}
 				sk->GetResourceForRendering()->LODRenderData[0].InitResources(false, 0, morphtargets, sk);
 			}
-#endif
+#endif // UE_VERSION_OLDER_THAN(5,4,0)
 		}
 	}
-#endif
+#endif // UE_VERSION_OLDER_THAN(4,24,0)
 
-#endif // editor
+#endif // WITH_EDITOR (matching the opening WITH_EDITOR directive)
 
 	return true;
 }
+#endif
 
 
 VrmConvertMorphTarget::VrmConvertMorphTarget()

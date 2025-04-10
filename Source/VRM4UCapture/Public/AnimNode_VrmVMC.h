@@ -29,11 +29,11 @@ struct VRM4UCAPTURE_API FAnimNode_VrmVMC : public FAnimNode_SkeletalControlBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Skeleton, meta=(PinHiddenByDefault))
 	const UVrmMetaObject *VrmMetaObject = nullptr;
 
-#if	UE_VERSION_OLDER_THAN(5,0,0)
+#if	UE_VERSION_OLDER_THAN(5, 0, 0)
 	TAssetPtr<UVrmMetaObject> VrmMetaObject_Internal = nullptr;
 	TAssetPtr<UVrmAssetListObject> VrmAssetListObject_Internal = nullptr;
 #else
-	TSoftObjectPtr<UVrmMetaObject> VrmMetaObject_Internal = nullptr;
+	TSoftObjectPtr<const UVrmMetaObject> VrmMetaObject_Internal = nullptr;
 	TSoftObjectPtr<UVrmAssetListObject> VrmAssetListObject_Internal = nullptr;
 #endif
 

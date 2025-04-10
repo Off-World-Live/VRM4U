@@ -7,7 +7,8 @@
 #include "VrmMetaObject.generated.h"
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMSpringMeta{
+struct VRM4U_API FVRMSpringMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -17,11 +18,11 @@ struct VRM4U_API FVRMSpringMeta{
 	float gravityPower = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	FVector gravityDir = { 0,-1,0 };
+	FVector gravityDir = {0, -1, 0};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	float dragForce = 0.4f;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	float hitRadius = 0.f;
 
@@ -42,9 +43,10 @@ struct VRM4U_API FVRMSpringMeta{
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMSpringColliderData {
+struct VRM4U_API FVRMSpringColliderData
+{
 	GENERATED_BODY()
-		
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	FVector offset = FVector::ZeroVector;
 
@@ -53,7 +55,8 @@ struct VRM4U_API FVRMSpringColliderData {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMColliderGroupMeta {
+struct VRM4U_API FVRMColliderGroupMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -65,7 +68,8 @@ struct VRM4U_API FVRMColliderGroupMeta {
 
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMColliderMeta {
+struct VRM4U_API FVRMColliderMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -78,7 +82,8 @@ struct VRM4U_API FVRMColliderMeta {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRM1SpringJointMeta {
+struct VRM4U_API FVRM1SpringJointMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -97,15 +102,15 @@ struct VRM4U_API FVRM1SpringJointMeta {
 	float gravityPower = 1.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	FVector gravityDir = { 0,-1,0 };
+	FVector gravityDir = {0, -1, 0};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	float dragForce = 0.5f;
-
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRM1SpringMeta {
+struct VRM4U_API FVRM1SpringMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -119,7 +124,8 @@ struct VRM4U_API FVRM1SpringMeta {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRM1SpringCollider {
+struct VRM4U_API FVRM1SpringCollider
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -143,7 +149,8 @@ struct VRM4U_API FVRM1SpringCollider {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRM1SpringColliderGroups {
+struct VRM4U_API FVRM1SpringColliderGroups
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -154,7 +161,8 @@ struct VRM4U_API FVRM1SpringColliderGroups {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRM1SpringBoneMeta {
+struct VRM4U_API FVRM1SpringBoneMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -171,11 +179,12 @@ struct VRM4U_API FVRM1SpringBoneMeta {
 //////
 
 
-
 // BlendShape
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVrmBlendShape{
+struct VRM4U_API FVrmBlendShape
+{
 	GENERATED_BODY()
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	FString morphTargetName;
@@ -187,35 +196,38 @@ public:
 	FString meshName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	int meshID=0;
+	int meshID = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	int shapeIndex=0;
-	
+	int shapeIndex = 0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	int weight=100;
+	int weight = 100;
 };
 
 // BlendShape Material
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVrmBlendShapeMaterialList {
+struct VRM4U_API FVrmBlendShapeMaterialList
+{
 	GENERATED_BODY()
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-		FString materialName;
+	FString materialName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-		FString propertyName;
+	FString propertyName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-		FLinearColor color = FLinearColor::Black;
+	FLinearColor color = FLinearColor::Black;
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVrmBlendShapeGroup {
+struct VRM4U_API FVrmBlendShapeGroup
+{
 	GENERATED_BODY()
-public:
 
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	FString name;
 
@@ -238,7 +250,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	FString overrideMouth;
-
 };
 
 //struct VRM4U_API FBVrmlendShapeGroup {
@@ -246,12 +257,14 @@ public:
 //};
 
 UENUM(BlueprintType)
-enum class EVRMConstraintType : uint8 {
+enum class EVRMConstraintType : uint8
+{
 	None, Roll, Aim, Rotation,
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMConstraintRoll {
+struct VRM4U_API FVRMConstraintRoll
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -268,7 +281,8 @@ struct VRM4U_API FVRMConstraintRoll {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMConstraintAim {
+struct VRM4U_API FVRMConstraintAim
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -285,7 +299,8 @@ struct VRM4U_API FVRMConstraintAim {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMConstraintRotation {
+struct VRM4U_API FVRMConstraintRotation
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -299,7 +314,8 @@ struct VRM4U_API FVRMConstraintRotation {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMAnimationLookAt {
+struct VRM4U_API FVRMAnimationLookAt
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -310,7 +326,8 @@ struct VRM4U_API FVRMAnimationLookAt {
 };
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMAnimationExpressionPreset {
+struct VRM4U_API FVRMAnimationExpressionPreset
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -325,7 +342,8 @@ struct VRM4U_API FVRMAnimationExpressionPreset {
 
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMAnimationMeta {
+struct VRM4U_API FVRMAnimationMeta
+{
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
@@ -333,12 +351,12 @@ struct VRM4U_API FVRMAnimationMeta {
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
 	TArray<FVRMAnimationExpressionPreset> expressionPreset;
-		
 };
 
 
 USTRUCT(Blueprintable, BlueprintType)
-struct VRM4U_API FVRMConstraint {
+struct VRM4U_API FVRMConstraint
+{
 	GENERATED_BODY()
 
 
@@ -355,51 +373,82 @@ struct VRM4U_API FVRMConstraint {
 	FVRMConstraintRotation constraintRotation;
 };
 
+UENUM(BlueprintType)
+enum class EVrmSkeletonType : uint8
+{
+	Auto UMETA(DisplayName = "Auto Detect"),
+	VRM UMETA(DisplayName = "VRM/VRoid"),
+	Mixamo UMETA(DisplayName = "Mixamo"),
+	MetaHuman UMETA(DisplayName = "MetaHuman"),
+	DAZ UMETA(DisplayName = "DAZ")
+};
+
+USTRUCT(BlueprintType)
+struct VRM4U_API FVrmBoneOverride
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bone Mapping")
+	FString HumanoidBoneName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bone Mapping")
+	FString ModelBoneName;
+};
 
 UCLASS(Blueprintable, BlueprintType)
 class VRM4U_API UVrmMetaObject : public UObject
 {
 	GENERATED_BODY()
-	
+
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	// Basic properties
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Meta")
 	int Version = 0;
 
 	UFUNCTION(BlueprintPure, Category = "VRM4U")
-	int GetVRMVersion() const {
+	int GetVRMVersion() const
+	{
 		return Version;
 	}
 
-	// humanoid name -> model name
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	// Skeleton properties
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skeleton", meta = (DisplayName = "Skeleton Type"))
+	EVrmSkeletonType SkeletonType = EVrmSkeletonType::Auto;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skeleton")
+	class USkeletalMesh* SkeletalMesh;
+
+	// Bone mapping properties
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bone Mapping", meta = (DisplayName = "Humanoid Bone Table"))
 	TMap<FString, FString> humanoidBoneTable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bone Mapping",
+		meta = (DisplayName = "Custom Bone Overrides", ToolTip =
+			"Override specific bone mappings regardless of detected skeleton type"))
+	TArray<FVrmBoneOverride> CustomBoneOverrides;
+
+	// Keep the rest of your properties with appropriate categorization
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blend Shapes")
 	TArray<FVrmBlendShapeGroup> BlendShapeGroup;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Physics")
 	TArray<FVRMSpringMeta> VRMSpringMeta;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Physics")
 	FVRM1SpringBoneMeta VRM1SpringBoneMeta;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Physics")
 	TArray<FVRMColliderMeta> VRMColliderMeta;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Physics")
 	TArray<FVRMColliderGroupMeta> VRMColliderGroupMeta;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Constraints")
 	TMap<FString, FVRMConstraint> VRMConstraintMeta;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	FVRMAnimationMeta VRMAnimationMeta;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	class USkeletalMesh *SkeletalMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Rendering)
-	class UVrmAssetListObject *VrmAssetListObject;
-
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Assets")
+	class UVrmAssetListObject* VrmAssetListObject;
 };

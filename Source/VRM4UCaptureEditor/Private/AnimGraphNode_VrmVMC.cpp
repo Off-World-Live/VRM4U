@@ -21,24 +21,34 @@
 UAnimGraphNode_VrmVMC::UAnimGraphNode_VrmVMC(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-#if	UE_VERSION_OLDER_THAN(5,0,0)
+#if	UE_VERSION_OLDER_THAN(5, 0, 0)
 	CurWidgetMode = (int32)FWidget::WM_Rotate;
 #else
 	CurWidgetMode = UE::Widget::EWidgetMode::WM_Rotate;
 #endif
 }
 
-void UAnimGraphNode_VrmVMC::ValidateAnimNodePostCompile(FCompilerResultsLog& MessageLog, UAnimBlueprintGeneratedClass* CompiledClass, int32 CompiledNodeIndex) {
-
-	if (Node.VrmMetaObject == nullptr) {
+void UAnimGraphNode_VrmVMC::ValidateAnimNodePostCompile(FCompilerResultsLog& MessageLog,
+														UAnimBlueprintGeneratedClass* CompiledClass,
+														int32 CompiledNodeIndex)
+{
+	if (Node.VrmMetaObject == nullptr)
+	{
 		//MessageLog.Warning(*LOCTEXT("VrmNoMetaObject", "@@ - You must set VrmMetaObject").ToString(), this);
-	} else {
-		if (Node.VrmMetaObject->SkeletalMesh) {
-			if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != CompiledClass->GetTargetSkeleton()) {
-				MessageLog.Warning(*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(), this);
+	}
+	else
+	{
+		if (Node.VrmMetaObject->SkeletalMesh)
+		{
+			if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != CompiledClass->GetTargetSkeleton())
+			{
+				MessageLog.Warning(
+					*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(),
+					this);
 			}
 		}
-		if (CompiledClass->GetTargetSkeleton()->GetReferenceSkeleton().GetRawBoneNum() <= 0) {
+		if (CompiledClass->GetTargetSkeleton()->GetReferenceSkeleton().GetRawBoneNum() <= 0)
+		{
 			MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - Skeleton bad data").ToString(), this);
 		}
 	}
@@ -51,16 +61,22 @@ void UAnimGraphNode_VrmVMC::ValidateAnimNodeDuringCompilation(USkeleton* ForSkel
 	// Temporary fix where skeleton is not fully loaded during AnimBP compilation and thus virtual bone name check is invalid UE-39499 (NEED FIX) 
 	if (ForSkeleton && !ForSkeleton->HasAnyFlags(RF_NeedPostLoad))
 	{
-		if (Node.VrmMetaObject == nullptr) {
+		if (Node.VrmMetaObject == nullptr)
+		{
 			//MessageLog.Warning(*LOCTEXT("VrmNoMetaObject", "@@ - You must set VrmMetaObject").ToString(), this);
-		} else {
-			if (Node.VrmMetaObject->SkeletalMesh){
-				if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != ForSkeleton) {
-			//		MessageLog.Warning(*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(), this);
+		}
+		else
+		{
+			if (Node.VrmMetaObject->SkeletalMesh)
+			{
+				if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != ForSkeleton)
+				{
+					//		MessageLog.Warning(*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(), this);
 				}
 			}
-			if (ForSkeleton->GetReferenceSkeleton().GetRawBoneNum() <= 0) {
-			//	MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - Skeleton bad data").ToString(), this);
+			if (ForSkeleton->GetReferenceSkeleton().GetRawBoneNum() <= 0)
+			{
+				//	MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - Skeleton bad data").ToString(), this);
 			}
 		}
 
@@ -90,7 +106,7 @@ void UAnimGraphNode_VrmVMC::ValidateAnimNodeDuringCompilation(USkeleton* ForSkel
 
 	//if ((Node.TranslationMode == BMM_Ignore) && (Node.RotationMode == BMM_Ignore) && (Node.ScaleMode == BMM_Ignore))
 	{
-	//	MessageLog.Warning(*LOCTEXT("NothingToModify", "@@ - No components to modify selected.  Either Rotation, Translation, or Scale should be set to something other than Ignore").ToString(), this);
+		//	MessageLog.Warning(*LOCTEXT("NothingToModify", "@@ - No components to modify selected.  Either Rotation, Translation, or Scale should be set to something other than Ignore").ToString(), this);
 	}
 
 	Super::ValidateAnimNodeDuringCompilation(ForSkeleton, MessageLog);
@@ -131,7 +147,6 @@ FText UAnimGraphNode_VrmVMC::GetNodeTitle(ENodeTitleType::Type TitleType) const
 
 	return CachedNodeTitles[TitleType];
 	*/
-
 }
 
 //void UAnimGraphNode_VrmVMC::CopyNodeDataToPreviewNode(FAnimNode_Base* InPreviewNode)
@@ -143,14 +158,78 @@ FEditorModeID UAnimGraphNode_VrmVMC::GetEditorMode() const
 	return Super::GetEditorMode();
 }
 
-void UAnimGraphNode_VrmVMC::Draw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent * PreviewSkelMeshComp) const
+void UAnimGraphNode_VrmVMC::Draw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const
 {
 	if (PreviewSkelMeshComp)
 	{
-		if (FAnimNode_VrmVMC* ActiveNode = GetActiveInstanceNode<FAnimNode_VrmVMC>(PreviewSkelMeshComp->GetAnimInstance()))
+		if (FAnimNode_VrmVMC* ActiveNode = GetActiveInstanceNode<FAnimNode_VrmVMC>(
+			PreviewSkelMeshComp->GetAnimInstance()))
 		{
-			if (bPreviewLive) {
+			if (bPreviewLive)
+			{
 				//ActiveNode->ConditionalDebugDraw(PDI, PreviewSkelMeshComp, bPreviewForeground);
+			}
+		}
+	}
+}
+
+void UAnimGraphNode_VrmVMC::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	// Check if the meta object property was changed
+	const FName PropertyName = PropertyChangedEvent.GetPropertyName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FAnimNode_VrmVMC, VrmMetaObject))
+	{
+		if (Node.VrmMetaObject && Node.VrmMetaObject->SkeletalMesh)
+		{
+			// Try to automatically populate metadata if needed
+			if (Node.VrmMetaObject->humanoidBoneTable.Num() == 0)
+			{
+				// We need a non-const pointer to modify the meta object
+				UVrmMetaObject* MutableMetaObject = const_cast<UVrmMetaObject*>(Node.VrmMetaObject);
+
+				if (MutableMetaObject)
+				{
+					bool bSuccess = UAutoPopulateVrmMeta::AutoPopulateMetaObject(
+						MutableMetaObject, MutableMetaObject->SkeletalMesh);
+
+					// Create notification about the auto-population result
+					ESkeletonType DetectedType = UAutoPopulateVrmMeta::DetectSkeletonType(
+						MutableMetaObject->SkeletalMesh);
+					FString TypeName;
+					switch (DetectedType)
+					{
+					case ESkeletonType::VRM: TypeName = TEXT("VRM");
+						break;
+					case ESkeletonType::Mixamo: TypeName = TEXT("Mixamo");
+						break;
+					case ESkeletonType::MetaHuman: TypeName = TEXT("MetaHuman");
+						break;
+					case ESkeletonType::DAZ: TypeName = TEXT("DAZ");
+						break;
+					default: TypeName = TEXT("Unknown");
+					}
+
+					int32 MappedBoneCount = Node.VrmMetaObject->humanoidBoneTable.Num();
+					FString Message;
+					if (bSuccess)
+					{
+						Message = FString::Printf(TEXT("VRM4U: Successfully detected %s skeleton and mapped %d bones."),
+												*TypeName, MappedBoneCount);
+					}
+					else
+					{
+						Message = FString::Printf(
+							TEXT(
+								"VRM4U: Detected %s skeleton but could not map all required bones. Check log for details."),
+							*TypeName);
+					}
+
+					FNotificationInfo Info(FText::FromString(Message));
+					Info.ExpireDuration = 5.0f;
+					FSlateNotificationManager::Get().AddNotification(Info);
+				}
 			}
 		}
 	}
