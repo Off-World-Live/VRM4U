@@ -114,6 +114,7 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 	const auto RefSkeleton = Output.AnimInstanceProxy->GetSkeleton()->GetReferenceSkeleton();
 	const FTransform ComponentTransform = Output.AnimInstanceProxy->GetComponentTransform();
 	const auto& RefSkeletonTransform = RefSkeleton.GetRefBonePose();
+	const FBoneContainer& RequiredBones = Output.Pose.GetPose().GetBoneContainer();
 
 	if (RefSkeletonTransform_global.Num() != RefSkeletonTransform.Num()) {
 		return;
@@ -186,11 +187,14 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 			auto modelBone = filterList.begin()->Value;
 #endif
 
-
 			int index = RefSkeleton.FindBoneIndex(*t.Value);
 			if (index < 0) continue;
 
-			FBoneTransform f(FCompactPoseBoneIndex(index), modelBone);
+			// Convert reference skeleton index to compact pose index
+			FCompactPoseBoneIndex CompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(index);
+			if (CompactIndex == FCompactPoseBoneIndex(INDEX_NONE)) continue;
+
+			FBoneTransform f(CompactIndex, modelBone);
 			//f.Transform.SetRotation(FQuat::Identity);
 
 			if (bFirstBone) {
@@ -203,7 +207,6 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 					auto v = RefSkeletonTransform[index].GetLocation();
 					f.Transform.SetTranslation(v);
 				}
-
 
 				// root bone
 				FTransform RootTrans;
@@ -218,10 +221,13 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 					// hip == root
 					f.Transform.SetTranslation(f.Transform.GetLocation() + RootTrans.GetLocation());
 				} else {
-					// orig root
-					FBoneTransform bt(FCompactPoseBoneIndex(0), RootTrans);
-					tmpOutTransform.Add(bt);
-					boneIndexTable.Add(0);
+					// orig root - Convert root bone index to compact index
+					FCompactPoseBoneIndex RootCompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(0);
+					if (RootCompactIndex != FCompactPoseBoneIndex(INDEX_NONE)) {
+						FBoneTransform bt(RootCompactIndex, RootTrans);
+						tmpOutTransform.Add(bt);
+						boneIndexTable.Add(0);
+					}
 				}
 
 			} else {
@@ -243,7 +249,7 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 			boneIndexTable.Add(index);
 		}
 
-		// bone hierarchy
+		// bone hierarchy - Convert parent bone indices to compact indices
 		for (int i = 1; i < tmpOutTransform.Num(); ++i) {
 			int parentBoneIndex = RefSkeleton.GetParentIndex(boneIndexTable[i]);
 			int parentInTable = boneIndexTable.Find(parentBoneIndex);
@@ -254,10 +260,14 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 				}
 				if (parentBoneIndex < 0) break;
 
-				// add outtransform with ref bone
-				FBoneTransform f(FCompactPoseBoneIndex(parentBoneIndex), RefSkeletonTransform[parentBoneIndex]);
-				tmpOutTransform.Add(f);
-				boneIndexTable.Add(parentBoneIndex);
+				// Convert parent bone index to compact index before creating FBoneTransform
+				FCompactPoseBoneIndex ParentCompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(parentBoneIndex);
+				if (ParentCompactIndex != FCompactPoseBoneIndex(INDEX_NONE)) {
+					// add outtransform with ref bone
+					FBoneTransform f(ParentCompactIndex, RefSkeletonTransform[parentBoneIndex]);
+					tmpOutTransform.Add(f);
+					boneIndexTable.Add(parentBoneIndex);
+				}
 
 				parentBoneIndex = RefSkeleton.GetParentIndex(parentBoneIndex);
 				parentInTable = boneIndexTable.Find(parentBoneIndex);
@@ -284,7 +294,6 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 		}
 		OutBoneTransforms.Add(a);
 	}
-
 }
 
 bool FAnimNode_VrmVMC::IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones) 
