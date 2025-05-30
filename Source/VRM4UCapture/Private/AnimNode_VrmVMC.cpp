@@ -50,6 +50,35 @@ void FAnimNode_VrmVMC::Initialize_AnyThread(const FAnimationInitializeContext& C
 		auto *s = subsystem->FindOrAddServer(ServerAddress, Port);
 		if (s) {
 			s->bForceUpdate = bForceUpdate;
+            
+			// Configure performance settings based on mode
+			switch (PerformanceMode) {
+			case EVMCPerformanceMode::Performance:
+				s->UpdateThrottleTime = 1.0f / 30.0f;  // 30 FPS
+				s->bAdaptiveThrottling = false;
+				break;
+                    
+			case EVMCPerformanceMode::Balanced:
+				s->UpdateThrottleTime = 1.0f / 60.0f;  // 60 FPS
+				s->bAdaptiveThrottling = false;
+				break;
+                    
+			case EVMCPerformanceMode::Streaming:
+				s->UpdateThrottleTime = 1.0f / 90.0f;  // 90 FPS
+				s->bAdaptiveThrottling = false;
+				break;
+                    
+			case EVMCPerformanceMode::Adaptive:
+				s->UpdateThrottleTime = 1.0f / 60.0f;  // Base rate
+				s->bAdaptiveThrottling = true;         // Enable adaptive
+				break;
+                    
+			case EVMCPerformanceMode::Custom:
+				int ClampedRate = FMath::Clamp(CustomUpdateRate, 30, 120);
+				s->UpdateThrottleTime = 1.0f / ClampedRate;
+				s->bAdaptiveThrottling = false;
+				break;
+			}
 		}
 	}
 	bCreateServer = true;
@@ -69,7 +98,6 @@ void FAnimNode_VrmVMC::Initialize_AnyThread(const FAnimationInitializeContext& C
 				g[i] = g[i] * g[parent];
 			}
 		}
-
 	}
 }
 void FAnimNode_VrmVMC::CacheBones_AnyThread(const FAnimationCacheBonesContext& Context) {
@@ -99,11 +127,13 @@ void FAnimNode_VrmVMC::EvaluateComponentPose_AnyThread(FComponentSpacePoseContex
 	Super::EvaluateComponentPose_AnyThread(Output);
 }
 
-void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms)
+void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output,
+                                                         TArray<FBoneTransform>& OutBoneTransforms)
 {
 	check(OutBoneTransforms.Num() == 0);
 
-	if (VrmMetaObject_Internal == nullptr) {
+	if (VrmMetaObject_Internal == nullptr)
+	{
 		return;
 	}
 
@@ -116,7 +146,8 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 	const auto& RefSkeletonTransform = RefSkeleton.GetRefBonePose();
 	const FBoneContainer& RequiredBones = Output.Pose.GetPose().GetBoneContainer();
 
-	if (RefSkeletonTransform_global.Num() != RefSkeletonTransform.Num()) {
+	if (RefSkeletonTransform_global.Num() != RefSkeletonTransform.Num())
+	{
 		return;
 	}
 
@@ -124,46 +155,56 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 	TArray<FBoneTransform> tmpOutTransform;
 
 	FVMCData VMCData;
-	if (subsystem->CopyVMCData(VMCData, ServerAddress, Port) == false) {
+	if (subsystem->CopyVMCData(VMCData, ServerAddress, Port) == false)
+	{
 		return;
 	}
 
-	if (VMCData.BoneData.Num() == 0 && VMCData.CurveData.Num() == 0) {
+	if (VMCData.BoneData.Num() == 0 && VMCData.CurveData.Num() == 0)
+	{
 		return;
 	}
-	if (bApplyPerfectSync) {
-		for (auto& c : VMCData.CurveData) {
+	if (bApplyPerfectSync)
+	{
+		for (auto& c : VMCData.CurveData)
+		{
 			if (c.Key.Contains(TEXT("BlendShape.")) == false) continue;
 
-			c.Key.RightChopInline(11); // [blendahape.]
+			c.Key.RightChopInline(11); // [blendshape.]
 		}
 	}
 
 	TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 
-	const auto &MorphList = Output.AnimInstanceProxy->GetSkelMeshComponent()->GetSkinnedAsset()->GetMorphTargets();
-	for (auto& c : VMCData.CurveData) {
-#if	UE_VERSION_OLDER_THAN(5,3,0)
-		{
-			SmartName::UID_Type NewUID;
-			FName NewName = *c.Key;
+	const auto& MorphList = Output.AnimInstanceProxy->GetSkelMeshComponent()->GetSkinnedAsset()->GetMorphTargets();
+	for (auto& c : VMCData.CurveData)
+	{
+#if	UE_VERSION_OLDER_THAN(5, 3, 0)
+        {
+            SmartName::UID_Type NewUID;
+            FName NewName = *c.Key;
 
-			NewUID = Skeleton->GetUIDByName(USkeleton::AnimCurveMappingName, NewName);
+            NewUID = Skeleton->GetUIDByName(USkeleton::AnimCurveMappingName, NewName);
 
-			Output.Curve.Set(NewUID, c.Value);
-		}
+            Output.Curve.Set(NewUID, c.Value);
+        }
 #else
-		auto m = MorphList.FindByPredicate([&c](const TObjectPtr<UMorphTarget> &m) {
+		auto m = MorphList.FindByPredicate([&c](const TObjectPtr<UMorphTarget>& m)
+		{
 			FString s = c.Key;
 
-			if (m->GetName().Compare(s, ESearchCase::IgnoreCase)) {
+			if (m->GetName().Compare(s, ESearchCase::IgnoreCase))
+			{
 				return false;
 			}
 			return true;
 		});
-		if (m) {
+		if (m)
+		{
 			Output.Curve.Set(*m->GetName(), c.Value);
-		} else {
+		}
+		else
+		{
 			Output.Curve.Set(*c.Key, c.Value);
 		}
 #endif
@@ -172,16 +213,18 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 	{
 		bool bFirstBone = true;
 
-		for (const auto &t : VrmMetaObject_Internal->humanoidBoneTable) {
-#if	UE_VERSION_OLDER_THAN(4,27,0)
-			auto *tmpVal = BoneTrans.Find(t.Key.ToLower());
-			if (tmpVal == nullptr) continue;
+		for (const auto& t : VrmMetaObject_Internal->humanoidBoneTable)
+		{
+#if	UE_VERSION_OLDER_THAN(4, 27, 0)
+            auto *tmpVal = BoneTrans.Find(t.Key.ToLower());
+            if (tmpVal == nullptr) continue;
 
-			auto modelBone = *tmpVal;
+            auto modelBone = *tmpVal;
 #else
-			auto filterList= BoneTrans.FilterByPredicate([&t](TPair<FString, FTransform> a) {
-				return a.Key.Compare(t.Key, ESearchCase::IgnoreCase) == 0;
-			}
+			auto filterList = BoneTrans.FilterByPredicate([&t](TPair<FString, FTransform> a)
+				{
+					return a.Key.Compare(t.Key, ESearchCase::IgnoreCase) == 0;
+				}
 			);
 			if (filterList.Num() != 1) continue;
 			auto modelBone = filterList.begin()->Value;
@@ -195,74 +238,89 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 			if (CompactIndex == FCompactPoseBoneIndex(INDEX_NONE)) continue;
 
 			FBoneTransform f(CompactIndex, modelBone);
-			//f.Transform.SetRotation(FQuat::Identity);
 
-			if (bFirstBone) {
+			if (bFirstBone)
+			{
 				bFirstBone = false;
 
-				if (bUseRemoteCenterPos) {
+				if (bUseRemoteCenterPos)
+				{
 					auto v = f.Transform.GetLocation() * ModelRelativeScale;
 					f.Transform.SetTranslation(v);
-				} else {
+				}
+				else
+				{
 					auto v = RefSkeletonTransform[index].GetLocation();
 					f.Transform.SetTranslation(v);
 				}
 
 				// root bone
 				FTransform RootTrans;
-				for (auto& a : BoneTrans) {
-					if (a.Key.Compare(TEXT("root"), ESearchCase::IgnoreCase)) {
+				for (auto& a : BoneTrans)
+				{
+					if (a.Key.Compare(TEXT("root"), ESearchCase::IgnoreCase))
+					{
 						continue;
 					}
 					RootTrans = a.Value;
 					break;
 				}
-				if (index == 0) {
+				if (index == 0)
+				{
 					// hip == root
 					f.Transform.SetTranslation(f.Transform.GetLocation() + RootTrans.GetLocation());
-				} else {
+				}
+				else
+				{
 					// orig root - Convert root bone index to compact index
 					FCompactPoseBoneIndex RootCompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(0);
-					if (RootCompactIndex != FCompactPoseBoneIndex(INDEX_NONE)) {
+					if (RootCompactIndex != FCompactPoseBoneIndex(INDEX_NONE))
+					{
 						FBoneTransform bt(RootCompactIndex, RootTrans);
 						tmpOutTransform.Add(bt);
 						boneIndexTable.Add(0);
 					}
 				}
-
-			} else {
+			}
+			else
+			{
 				FVector v = RefSkeletonTransform[index].GetLocation();
 				f.Transform.SetTranslation(v);
 			}
 
-			if (bIgnoreLocalRotation){
+			if (bIgnoreLocalRotation)
+			{
 				auto r_refg = RefSkeletonTransform_global[index].GetRotation();
 				auto r_ref = RefSkeletonTransform[index].GetRotation();
 				auto r_vmc = f.Transform.GetRotation();
 
 				auto r_dif = r_refg.Inverse() * r_vmc * r_refg;
-				
+
 				f.Transform.SetRotation(r_ref * r_dif);
 			}
-			//f.Transform.SetTranslation(RefSkeletonTransform[index].GetLocation());
 			tmpOutTransform.Add(f);
 			boneIndexTable.Add(index);
 		}
 
 		// bone hierarchy - Convert parent bone indices to compact indices
-		for (int i = 1; i < tmpOutTransform.Num(); ++i) {
+		for (int i = 1; i < tmpOutTransform.Num(); ++i)
+		{
 			int parentBoneIndex = RefSkeleton.GetParentIndex(boneIndexTable[i]);
 			int parentInTable = boneIndexTable.Find(parentBoneIndex);
 
-			for (int j = 0; j < 1000; ++j) {
-				if (parentInTable >= 0) {
+			for (int j = 0; j < 1000; ++j)
+			{
+				if (parentInTable >= 0)
+				{
 					break;
 				}
 				if (parentBoneIndex < 0) break;
 
 				// Convert parent bone index to compact index before creating FBoneTransform
-				FCompactPoseBoneIndex ParentCompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(parentBoneIndex);
-				if (ParentCompactIndex != FCompactPoseBoneIndex(INDEX_NONE)) {
+				FCompactPoseBoneIndex ParentCompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(
+					parentBoneIndex);
+				if (ParentCompactIndex != FCompactPoseBoneIndex(INDEX_NONE))
+				{
 					// add outtransform with ref bone
 					FBoneTransform f(ParentCompactIndex, RefSkeletonTransform[parentBoneIndex]);
 					tmpOutTransform.Add(f);
@@ -279,18 +337,23 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 		boneIndexTable.Sort();
 	}
 
-	for (int i = 0; i < tmpOutTransform.Num(); ++i) {
+	for (int i = 0; i < tmpOutTransform.Num(); ++i)
+	{
 		auto& a = tmpOutTransform[i];
 
 		int parentBoneIndex = RefSkeleton.GetParentIndex(boneIndexTable[i]);
 
 		int parentInHandTable = boneIndexTable.Find(parentBoneIndex);
-		if (parentInHandTable >= 0) {
+		if (parentInHandTable >= 0)
+		{
 			a.Transform *= tmpOutTransform[parentInHandTable].Transform;
-		} else {
+		}
+		else
+		{
 			// root
 			auto BoneSpace = EBoneControlSpace::BCS_ParentBoneSpace;
-			FAnimationRuntime::ConvertBoneSpaceTransformToCS(ComponentTransform, Output.Pose, a.Transform, a.BoneIndex, BoneSpace);
+			FAnimationRuntime::ConvertBoneSpaceTransformToCS(ComponentTransform, Output.Pose, a.Transform, a.BoneIndex,
+			                                                 BoneSpace);
 		}
 		OutBoneTransforms.Add(a);
 	}
