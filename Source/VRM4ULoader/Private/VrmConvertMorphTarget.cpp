@@ -423,12 +423,13 @@ bool VRMConverter::ConvertMorphTarget(UVrmAssetListObject *vrmAssetList) {
 #if UE_VERSION_OLDER_THAN(5,0,0)
 // Original code for UE 4.x
 #else
-    {
-       FSkeletalMeshLODInfo* LODInfoPtr = sk->GetLODInfo(0);
-       if (LODInfoPtr) {
-          LODInfoPtr->ReductionSettings.NumOfTrianglesPercentage = 1.f;
-       }
-    }
+	{
+		FSkeletalMeshLODInfo* LODInfoPtr = sk->GetLODInfo(0);
+		if (LODInfoPtr)
+		{
+			LODInfoPtr->ReductionSettings.NumOfTrianglesPercentage = 1.f;
+		}
+	}
 #endif // UE_VERSION_OLDER_THAN(5,0,0)
 
 	{

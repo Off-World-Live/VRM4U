@@ -108,48 +108,33 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 		}
 		else
 		{
-			FString TypeName;
-			switch (SkeletonType)
-			{
-			case ESkeletonType::VRM: TypeName = TEXT("VRM");
-				break;
-			case ESkeletonType::Mixamo: TypeName = TEXT("Mixamo");
-				break;
-			case ESkeletonType::MetaHuman: TypeName = TEXT("MetaHuman");
-				break;
-			case ESkeletonType::DAZ: TypeName = TEXT("DAZ");
-				break;
-			default: TypeName = TEXT("Unknown");
-			}
+			FString TypeName = UEnum::GetValueAsString(SkeletonType);
 			UE_LOG(LogTemp, Log, TEXT("Auto-detected skeleton type: %s"), *TypeName);
 		}
 	}
 	else
 	{
-		// Use the user-specified type
 		switch (InMetaObject->SkeletonType)
 		{
 		case EVrmSkeletonType::VRM:
 			SkeletonType = ESkeletonType::VRM;
-			UE_LOG(LogTemp, Log, TEXT("Using user-specified skeleton type: VRM"));
 			break;
 		case EVrmSkeletonType::Mixamo:
 			SkeletonType = ESkeletonType::Mixamo;
-			UE_LOG(LogTemp, Log, TEXT("Using user-specified skeleton type: Mixamo"));
 			break;
 		case EVrmSkeletonType::MetaHuman:
 			SkeletonType = ESkeletonType::MetaHuman;
-			UE_LOG(LogTemp, Log, TEXT("Using user-specified skeleton type: MetaHuman"));
 			break;
 		case EVrmSkeletonType::DAZ:
 			SkeletonType = ESkeletonType::DAZ;
-			UE_LOG(LogTemp, Log, TEXT("Using user-specified skeleton type: DAZ"));
 			break;
 		default:
 			SkeletonType = ESkeletonType::Unknown;
-			UE_LOG(LogTemp, Warning, TEXT("Invalid user-specified skeleton type"));
 			break;
 		}
+		
+		FString TypeName = UEnum::GetValueAsString(SkeletonType);
+		UE_LOG(LogTemp, Log, TEXT("Using user-specified skeleton type: %s"), *TypeName);
 	}
 
 	// Based on the determined type, populate the bone mappings
@@ -173,7 +158,7 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 		return false;
 	}
 
-	// Apply custom bone overrides (implementation for Improvement #4)
+	// Apply custom bone overrides
 	ApplyCustomBoneOverrides(InMetaObject, InSkeletalMesh);
 
 	if (bSuccess)
@@ -182,11 +167,8 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to map bones for %s skeleton type"),
-				SkeletonType == ESkeletonType::VRM ? TEXT("VRM") :
-				SkeletonType == ESkeletonType::Mixamo ? TEXT("Mixamo") :
-				SkeletonType == ESkeletonType::MetaHuman ? TEXT("MetaHuman") :
-				SkeletonType == ESkeletonType::DAZ ? TEXT("DAZ") : TEXT("Unknown"));
+		FString TypeName = UEnum::GetValueAsString(SkeletonType);
+		UE_LOG(LogTemp, Warning, TEXT("Failed to map bones for %s skeleton type"), *TypeName);
 	}
 
 	return bSuccess;

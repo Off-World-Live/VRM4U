@@ -6,52 +6,56 @@ public class VRM4UCaptureEditor : ModuleRules
 {
 	public VRM4UCaptureEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
-        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PrivateDependencyModuleNames.AddRange(
-	        new string[] {
-		        "Core",
-		        "CoreUObject",
-		        "Engine",
+		PrivateDependencyModuleNames.AddRange(
+			new string[]
+			{
+				"Core",
+				"CoreUObject",
+				"Engine",
 
-		        "AnimGraphRuntime",
-		        "AnimGraph",
-		        "BlueprintGraph",
+				"AnimGraphRuntime",
+				"AnimGraph",
+				"BlueprintGraph",
 
-		        "UnrealEd",
-		        "AnimationEditMode",
-		        "Persona",
+				"UnrealEd",
+				"AnimationEditMode",
+				"Persona",
 
-		        "VRM4U",
-		        "VRM4UCapture", 
-		        "EditorStyle",
-             
-		        // dependencies for the editor extension
-		        "Slate",
-		        "SlateCore",
-		        "ContentBrowser",
-		        "ApplicationCore",
-		        "InputCore",
-		        "AssetRegistry",
-		        "AssetTools",
-		        "PropertyEditor",
-		        "EditorFramework",
-		        "ToolMenus",
-		        "AppFramework",
-	        });
+				"VRM4U",
+				"VRM4UCapture",
+				"EditorStyle",
 
-        PrivateIncludePathModuleNames.AddRange(
-	        new string[] {
-		        // Include paths only
-	        });
+				// dependencies for the editor extension
+				"Slate",
+				"SlateCore",
+				"ContentBrowser",
+				"ApplicationCore",
+				"InputCore",
+				"AssetRegistry",
+				"AssetTools",
+				"PropertyEditor",
+				"EditorFramework",
+				"ToolMenus",
+				"AppFramework",
+			});
 
-        DynamicallyLoadedModuleNames.AddRange(
-	        new string[] {
-	        });
+		PrivateIncludePathModuleNames.AddRange(
+			new string[]
+			{
+				// Include paths only
+			});
 
-        PrivateIncludePaths.AddRange(
-        new string[] {
-			//"../Runtime/Renderer/Private",
-        });
-    }
+		DynamicallyLoadedModuleNames.AddRange(
+			new string[]
+			{
+			});
+
+		PrivateIncludePaths.AddRange(
+			new string[]
+			{
+				//"../Runtime/Renderer/Private",
+			});
+	}
 }

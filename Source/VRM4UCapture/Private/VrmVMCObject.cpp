@@ -126,10 +126,10 @@ void UVrmVMCObject::FlushBufferedData(bool bForceFlush)
 		LastFrameTime = CurrentTime;
         
 		// Adaptive range: 30 FPS (slow) to 90 FPS (fast)
-		if (FrameDelta > 1.0f / 30.0f) {
-			CurrentThrottleTime = 1.0f / 30.0f;  // System struggling
-		} else if (FrameDelta < 1.0f / 60.0f) {
-			CurrentThrottleTime = 1.0f / 90.0f;  // System performing well
+		if (FrameDelta > ADAPTIVE_THROTTLE_SLOW_TIME) {
+			CurrentThrottleTime = ADAPTIVE_THROTTLE_SLOW_TIME;  // System struggling
+		} else if (FrameDelta < ADAPTIVE_THROTTLE_FAST_TIME) {
+			CurrentThrottleTime = ADAPTIVE_THROTTLE_HIGH_PERFORMANCE_TIME;  // System performing well
 		} else {
 			CurrentThrottleTime = UpdateThrottleTime; // Use base rate
 		}

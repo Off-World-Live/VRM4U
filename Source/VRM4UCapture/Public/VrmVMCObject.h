@@ -12,66 +12,78 @@
 
 struct FOSCMessage;
 
-struct FVMCData {
-    FString ServerAddress = "";
-    int Port = 0;
+struct FVMCData
+{
+	FString ServerAddress = "";
+	int Port = 0;
 
-    TMap<FString, FTransform> BoneData;
-    TMap<FString, float> CurveData;
+	TMap<FString, FTransform> BoneData;
+	TMap<FString, float> CurveData;
 
-    void ClearData() {
-       BoneData.Empty();
-       CurveData.Empty();
-    }
+	void ClearData()
+	{
+		BoneData.Empty();
+		CurveData.Empty();
+	}
 
-    bool operator==(const FVMCData& Other) const {
-       if (Port != Other.Port) return false;
-       if (ServerAddress != Other.ServerAddress) return false;
-       return true;
-    }
+	bool operator==(const FVMCData& Other) const
+	{
+		if (Port != Other.Port) return false;
+		if (ServerAddress != Other.ServerAddress) return false;
+		return true;
+	}
 };
 
 UCLASS()
 class VRM4UCAPTURE_API UVrmVMCObject : public UObject, public FTickableGameObject
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 private:
-    FCriticalSection cs;
-    TStrongObjectPtr<UOSCServer> OSCServer;
+	// Performance throttling constants
+	static constexpr float ADAPTIVE_THROTTLE_SLOW_FPS = 30.0f;
+	static constexpr float ADAPTIVE_THROTTLE_FAST_FPS = 60.0f;
+	static constexpr float ADAPTIVE_THROTTLE_HIGH_PERFORMANCE_FPS = 90.0f;
 
-    FVMCData VMCData;
-    FVMCData VMCData_Cache;
+	static constexpr float ADAPTIVE_THROTTLE_SLOW_TIME = 1.0f / ADAPTIVE_THROTTLE_SLOW_FPS;
+	static constexpr float ADAPTIVE_THROTTLE_FAST_TIME = 1.0f / ADAPTIVE_THROTTLE_FAST_FPS;
+	static constexpr float ADAPTIVE_THROTTLE_HIGH_PERFORMANCE_TIME = 1.0f / ADAPTIVE_THROTTLE_HIGH_PERFORMANCE_FPS;
 
-    bool bDataUpdated = false;
+	FCriticalSection cs;
+	TStrongObjectPtr<UOSCServer> OSCServer;
 
-    // Performance optimization members
-    float LastUpdateTime = 0.0f;
-    TMap<FString, FTransform> BoneDataBuffer;
-    TMap<FString, float> CurveDataBuffer;
-    bool bPendingUpdate = false;
+	FVMCData VMCData;
+	FVMCData VMCData_Cache;
 
-    // Helper method to flush buffered data
-    void FlushBufferedData(bool bForceFlush);
+	bool bDataUpdated = false;
+
+	// Performance optimization members
+	float LastUpdateTime = 0.0f;
+	TMap<FString, FTransform> BoneDataBuffer;
+	TMap<FString, float> CurveDataBuffer;
+	bool bPendingUpdate = false;
+
+	// Helper method to flush buffered data
+	void FlushBufferedData(bool bForceFlush);
 
 public:
-    FString ServerName;
-    uint16 port;
-    bool bForceUpdate = false;
+	FString ServerName;
+	uint16 port;
+	bool bForceUpdate = false;
 
-    // Simplified performance settings - set by AnimNode
-    float UpdateThrottleTime = 1.0f / 60.0f;
-    bool bAdaptiveThrottling = false;
+	// Simplified performance settings - set by AnimNode
+	float UpdateThrottleTime = 1.0f / 60.0f;
+	bool bAdaptiveThrottling = false;
 
-    void CreateServer(FString name, uint16 port);
-    void DestroyServer();
-    void OSCReceivedMessageEvent(const FOSCMessage& Message, const FString& IPAddress, uint16 Port);
+	void CreateServer(FString name, uint16 port);
+	void DestroyServer();
+	void OSCReceivedMessageEvent(const FOSCMessage& Message, const FString& IPAddress, uint16 Port);
 
-    bool CopyVMCData(FVMCData& dst);
-    void ClearVMCData();
+	bool CopyVMCData(FVMCData& dst);
+	void ClearVMCData();
 
-    // FTickableGameObject interface
-    virtual void Tick(float DeltaTime) override;
-    virtual bool IsTickable() const override { return OSCServer.IsValid(); }
-    virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UVrmVMCObject, STATGROUP_Tickables); }
+	// FTickableGameObject interface
+	virtual void Tick(float DeltaTime) override;
+	virtual bool IsTickable() const override { return OSCServer.IsValid(); }
+	virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UVrmVMCObject, STATGROUP_Tickables); }
 };
