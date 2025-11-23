@@ -10,6 +10,7 @@
 #if	UE_VERSION_OLDER_THAN(5,2,0)
 #else
 #include "DataDrivenShaderPlatformInfo.h"
+#include "SystemTextures.h"
 #endif
 
 #if	UE_VERSION_OLDER_THAN(5,3,0)
@@ -35,7 +36,7 @@
 #include "RenderGraphBuilder.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Stats/Stats.h"
-
+#include "DynamicRHI.h"
 
 DECLARE_GPU_STAT(VRM4U);
 
@@ -47,7 +48,8 @@ class FMyComputeShader : public FGlobalShader
 	SHADER_USE_PARAMETER_STRUCT(FMyComputeShader, FGlobalShader);
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SceneColorTexture)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, BaseColorTexture)
 
 		SHADER_PARAMETER_RDG_TEXTURE_SRV(Texture2D, NormalTexture)
 
@@ -70,9 +72,16 @@ class FMyComputeShader : public FGlobalShader
 		SHADER_PARAMETER(FVector3f, LightPosition)
 		SHADER_PARAMETER(FVector3f, LightDirection)
 		SHADER_PARAMETER(FVector3f, LightColor)
+		SHADER_PARAMETER(float, LightScale)
+		SHADER_PARAMETER(float, RimEdgeFade)
+
+		SHADER_PARAMETER(float, UseBinaryEdge)
+		SHADER_PARAMETER(float, RimEdgeBinaryRange)
 
 		SHADER_PARAMETER(float, SampleScreenScale)
 		SHADER_PARAMETER(float, SampleScale)
+
+		SHADER_PARAMETER(int, CustomStencilMask)
 
 		//RENDER_TARGET_BINDING_SLOTS()
 	END_SHADER_PARAMETER_STRUCT()
@@ -86,19 +95,27 @@ public:
 
 /*
 BEGIN_SHADER_PARAMETER_STRUCT(FMyComputeShaderParameters, )
-	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
+	SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, SceneColorTexture)
 	//RENDER_TARGET_BINDING_SLOTS()
 END_SHADER_PARAMETER_STRUCT()
 */
 
-#if	UE_VERSION_OLDER_THAN(5,4,0)
+#if	UE_VERSION_OLDER_THAN(5,2,0)
 #else
 IMPLEMENT_GLOBAL_SHADER(FMyComputeShader, "/VRM4UShaders/private/BaseColorCS.usf", "MainCS", SF_Compute);
 #endif
 
 
-static bool CurrentShaderModelSM6()
+static bool LocalCSEnable()
 {
+
+	static const auto CVarCustomDepth = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.CustomDepth"));
+	const int32 EnabledWithStencil = 3;// CustomDepthMode::EnabledWithStencil ではダメ。
+	if (CVarCustomDepth) {
+		if (CVarCustomDepth->GetValueOnAnyThread() != EnabledWithStencil) {
+			return false;
+		}
+	}
 
 	if (GMaxRHIFeatureLevel >= ERHIFeatureLevel::SM6) {
 		return true;
@@ -247,7 +264,7 @@ static void LocalCopyFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const
 
 static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRenderTargetBindingSlots& RenderTargets, TRDGUniformBufferRef<FSceneTextureUniformParameters> &SceneTextures) {
 
-#if	UE_VERSION_OLDER_THAN(5,5,0)
+#if	UE_VERSION_OLDER_THAN(5,2,0)
 #else
 
 	UVRM4U_RenderSubsystem* s = GEngine->GetEngineSubsystem<UVRM4U_RenderSubsystem>();
@@ -258,20 +275,17 @@ static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const 
 	for (int dataIndex = 0; dataIndex < data.Num(); ++dataIndex){
 		const auto& d = data[dataIndex];
 
-		// RenderTargets の0番目を取得
+		if (RenderTargets[0].GetTexture() == nullptr) continue;
+		if (RenderTargets[1].GetTexture() == nullptr) continue;
+		if (RenderTargets[2].GetTexture() == nullptr) continue;
+		if (RenderTargets[3].GetTexture() == nullptr) continue;
+
+		// RenderTargets
 		// 0 SceneColor
 		// 1 A normal
 		// 2 B MRS
 		// 3 C basecolor
 		// 4 D subsurface
-		const FRenderTargetBinding& FirstTarget = RenderTargets[0];
-
-		// FRDGTexture を取得
-		FRDGTextureRef TargetTexture = FirstTarget.GetTexture();
-		if (TargetTexture == nullptr) return;
-
-		// UAV を作成
-		FRDGTextureUAVRef GBufferUAV = GraphBuilder.CreateUAV(TargetTexture);
 
 
 		const FRDGSystemTextures& SystemTextures = FRDGSystemTextures::Get(GraphBuilder);
@@ -279,7 +293,22 @@ static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const 
 		//bool bCustomDepthProduced = HasBeenProduced(CustomDepthTextures.Depth);
 
 		FMyComputeShader::FParameters* Parameters = GraphBuilder.AllocParameters<FMyComputeShader::FParameters>();
-		Parameters->OutputTexture = GBufferUAV;
+
+		{
+			// SceneColorTexture
+			const FRenderTargetBinding& FirstTarget = RenderTargets[0];
+			FRDGTextureRef TargetTexture = FirstTarget.GetTexture();
+			FRDGTextureUAVRef GBufferUAV = GraphBuilder.CreateUAV(TargetTexture);
+			Parameters->SceneColorTexture = GBufferUAV;
+		}
+
+		{
+			// BaseColorTexture
+			//const FRenderTargetBinding& FirstTarget = RenderTargets[3];
+			//FRDGTextureRef TargetTexture = FirstTarget.GetTexture();
+			//FRDGTextureUAVRef GBufferUAV = GraphBuilder.CreateUAV(TargetTexture);
+			//Parameters->BaseColorTexture = GBufferUAV;
+		}
 
 		//Parameters->NormalTexture = GraphBuilder.CreateSRV(SceneTextures->GetParameters()->GBufferATexture);
 		Parameters->NormalTexture = GraphBuilder.CreateSRV(RenderTargets[1].GetTexture());
@@ -299,7 +328,7 @@ static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const 
 		Parameters->View = InView.ViewUniformBuffer;
 		//Parameters->SceneTextures = SceneTextures;
 		//Parameters->RenderTargets[0] = Output.GetRenderTargetBinding();
-		//PassParameters->OutputTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(OutputTexture));
+		//PassParameters->SceneColorTexture = GraphBuilder.CreateUAV(FRDGTextureUAVDesc(SceneColorTexture));
 
 		Parameters->UseCustomLightPosition = d.bUseCustomLighPosition;
 		Parameters->LightPosition = FVector3f(d.LightPosition);
@@ -307,9 +336,19 @@ static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const 
 
 		Parameters->UseCustomLightColor = d.bUseCustomLighColor;
 		Parameters->LightColor = FVector3f(d.LightColor);
+		Parameters->LightScale = d.LightScale;
+		Parameters->RimEdgeFade = d.RimEdgeFade;
+
+		Parameters->UseBinaryEdge = d.bUseBinaryEdge;
+		Parameters->RimEdgeBinaryRange = d.RimEdgeBinaryRange;
 
 		Parameters->SampleScreenScale = d.SampleScreenScale;
 		Parameters->SampleScale = d.SampleScale;
+
+		Parameters->CustomStencilMask = d.CustomStencilMask;
+
+		int Width = RenderTargets[0].GetTexture()->Desc.Extent.X;
+		int Height = RenderTargets[0].GetTexture()->Desc.Extent.Y;
 
 		TShaderMapRef<FMyComputeShader> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(
@@ -317,7 +356,7 @@ static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const 
 			RDG_EVENT_NAME("VRM4U_CustomGBufferWrite %d", dataIndex),
 			ComputeShader,
 			Parameters,
-			FIntVector(TargetTexture->Desc.Extent.X / 8, TargetTexture->Desc.Extent.Y / 8, 1)
+			FIntVector(Width / 8, Height / 8, 1)
 		);
 		/*
 		//FRDGBuilder GraphBuilder(FRHICommandListExecutor::GetImmediateCommandList());
@@ -325,12 +364,12 @@ static void LocalRimFilter(FRDGBuilder& GraphBuilder, FSceneView& InView, const 
 		//RenderTargets.
 
 		// Render TargetをRDGリソースに変換
-		FRDGTextureRef OutputTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(RenderTarget->GameThread_GetRenderTargetResource(), TEXT("OutputTexture")));
-		FRDGTextureUAVRef OutputUAV = GraphBuilder.CreateUAV(OutputTexture);
+		FRDGTextureRef SceneColorTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(RenderTarget->GameThread_GetRenderTargetResource(), TEXT("SceneColorTexture")));
+		FRDGTextureUAVRef OutputUAV = GraphBuilder.CreateUAV(SceneColorTexture);
 
 		// パラメータを設定
 		FMyComputeShader::FParameters* Parameters = GraphBuilder.AllocParameters<FMyComputeShader::FParameters>();
-		Parameters->OutputTexture = OutputUAV;
+		Parameters->SceneColorTexture = OutputUAV;
 
 		// Shaderを追加してディスパッチ
 		TShaderMapRef<FMyComputeShader> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -358,7 +397,7 @@ FVrmSceneViewExtension::FVrmSceneViewExtension(const FAutoRegister& AutoRegister
 
 void FVrmSceneViewExtension::PostRenderBasePassDeferred_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRenderTargetBindingSlots& RenderTargets, TRDGUniformBufferRef<FSceneTextureUniformParameters> SceneTextures) {
 
-	if (CurrentShaderModelSM6() == false) return;
+	if (LocalCSEnable() == false) return;
 
 	const auto FeatureLevel = InView.GetFeatureLevel();
 	if (FeatureLevel <= ERHIFeatureLevel::SM5) return;
@@ -414,7 +453,7 @@ void FVrmSceneViewExtension::PostRenderBasePassDeferred_RenderThread(FRDGBuilder
 
 
 	///// filter
-#if	UE_VERSION_OLDER_THAN(5,4,0)
+#if	UE_VERSION_OLDER_THAN(5,2,0)
 #else
 
 

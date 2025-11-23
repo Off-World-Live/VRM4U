@@ -373,8 +373,10 @@ void UVRM4U_RenderSubsystem::RemoveRimFilterDataByPriority(int Priority) {
 	FScopeLock lock(&cs_rim);
 	if (Priority < 0) {
 		RimFilterData.Empty();
+		return;
 	}
 	RimFilterData.RemoveAll([&Priority](const TWeakObjectPtr<UVrmExtensionRimFilterData>& Item) {
+		if (Item.IsValid() == false) return true;
 		return Item->Priority == Priority;
 		});
 }
@@ -394,6 +396,7 @@ TArray<UVrmExtensionRimFilterData::FFilterData> UVRM4U_RenderSubsystem::Generate
 	TArray<UVrmExtensionRimFilterData::FFilterData> f;
 	for (auto& a : RimFilterData) {
 		auto d = a->GetFilterData();
+		if (d.bUseFilter == false) continue;
 		f.Add(MoveTemp(d));
 	}
 	return MoveTemp(f);

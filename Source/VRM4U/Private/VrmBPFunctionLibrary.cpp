@@ -962,6 +962,29 @@ void UVrmBPFunctionLibrary::VRMChangeMaterialStaticSwitch(UMaterialInstanceConst
 #endif
 }
 
+void UVrmBPFunctionLibrary::VRMGetMaterialStaticSwitch(UMaterialInstance* material, FName paramName, bool& bHasParam, bool& bEnable) {
+
+	bHasParam = false;
+	bEnable = false;
+	if (material == nullptr) return;
+
+#if WITH_EDITORONLY_DATA
+	if (GIsEditor == false) {
+		return;
+	}
+
+	bool Value = false;
+	FGuid ExpressionGuid;
+	if (material->GetStaticSwitchParameterValue(paramName, Value, ExpressionGuid))
+	{
+		bHasParam = true;
+		bEnable = Value;
+		return;
+	}
+	return;
+#endif
+}
+
 
 
 UObject* UVrmBPFunctionLibrary::VRMDuplicateAsset(UObject *src, FString name, UObject *thisOwner) {
@@ -1002,6 +1025,11 @@ bool UVrmBPFunctionLibrary::VRMGetAssetsByPackageName(FName PackageName, TArray<
 	auto &AssetRegistry = AssetRegistryModule.Get();
 
 	return AssetRegistry.GetAssetsByPackageName(PackageName, OutAssetData, bIncludeOnlyOnDiskAssets);
+}
+
+void UVrmBPFunctionLibrary::VRMSetIsDirty(UObject* obj) {
+	if (obj == nullptr) return;
+	obj->MarkPackageDirty();
 }
 
 UTextureRenderTarget2D* UVrmBPFunctionLibrary::VRMCreateRenderTarget2D(UObject* WorldContextObject, int32 Width, int32 Height, ETextureRenderTargetFormat Format, FLinearColor ClearColor)
@@ -1900,4 +1928,20 @@ bool UVrmBPFunctionLibrary::VRMIsTemporaryObject(const UObject *obj) {
 	}
 	return false;
 }
+
+bool UVrmBPFunctionLibrary::VRMIsEditorPreviewObject(const UObject* obj) {
+	if (obj == nullptr) return true;
+
+	const UWorld* World = obj->GetWorld();
+
+	if (World == nullptr) return true;
+
+	if (World->WorldType == EWorldType::EditorPreview)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 

@@ -12,6 +12,10 @@
 #include "UnrealWidget.h"
 #include "AnimNodeEditMode.h"
 
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "AutoPopulateVrmMeta.h"
+
 #include "AnimGraphNode_VrmVMC.generated.h" 
 
 class FCompilerResultsLog;
@@ -37,6 +41,8 @@ public:
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
 	virtual FText GetTooltipText() const override;
 	// End of UEdGraphNode interface
+
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 protected:
 	// UAnimGraphNode_Base interface

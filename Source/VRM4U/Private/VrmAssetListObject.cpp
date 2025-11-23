@@ -69,15 +69,14 @@ void UVrmAssetListObject::CopyMember(UVrmAssetListObject *dst) const {
 }
 
 #if WITH_EDITOR
-void UVrmAssetListObject::GetAssetRegistryTags(TArray<FAssetRegistryTag>& OutTags) const
+void UVrmAssetListObject::GetAssetRegistryTags(FAssetRegistryTagsContext Context) const
 {
 	if (AssetImportData)
 	{
-		OutTags.Add(FAssetRegistryTag(SourceFileTagName(), AssetImportData->GetSourceData().ToJson(), FAssetRegistryTag::TT_Hidden));
-
-		OutTags.Add(FAssetRegistryTag("VRM4U", SourceFileTagName().ToString(), FAssetRegistryTag::TT_Hidden));
+		Context.AddTag(FAssetRegistryTag(SourceFileTagName(), AssetImportData->GetSourceData().ToJson(), FAssetRegistryTag::TT_Hidden));
+		Context.AddTag(FAssetRegistryTag("VRM4U", SourceFileTagName().ToString(), FAssetRegistryTag::TT_Hidden));
 	}
-	Super::GetAssetRegistryTags(OutTags);
+	Super::GetAssetRegistryTags(Context);
 }
 
 void UVrmAssetListObject::WaitUntilAsyncPropertyReleased() const {

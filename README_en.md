@@ -1,3 +1,5 @@
+> **Off World Live Fork:** This is a fork of [VRM4U](https://github.com/ruyo/VRM4U) with extended support for non-VRM skeletons. See our [Wiki](https://github.com/Off-World-Live/VRM4U/wiki).
+
 # VRM4U
 Runtime VRM loader for UnrealEngine4
 
