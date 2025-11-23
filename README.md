@@ -1,82 +1,105 @@
+> **Off World Live Fork:** This is a fork of [VRM4U](https://github.com/ruyo/VRM4U) with extended support for non-VRM skeletons. See our [Wiki](https://github.com/Off-World-Live/VRM4U/wiki).
 
-# Off World Live: Full-Body Markerless Motion Capture in Unreal with XR Animator & VRM4U
+# VRM4U
 
-## 📌 Overview
+[English Doc](https://github.com/ruyo/VRM4U/blob/master/README_en.md)
 
-This is a markerless motion capture solution by **Off World Live** that builds on [VRM4U](https://github.com/ruyo/VRM4U) and [XR Animator](https://github.com/ButzYung/SystemAnimatorOnline) to enable **full-body tracking** inside Unreal Engine 5.6 using **XR Animator** and the **VrmVMC** node.
+## はじめに
+VRM4UはUnrealEngine5(UE5, UE4)で動作する、VRMファイルのインポーターです。
 
-Supports skeleton types:
-- VRM
-- Metahuman
-- Mixamo
-- Daz Genesis 8
-- Any custom skeleton
+**使い方は [こちらのページにあります](https://ruyo.github.io/VRM4U/)**
 
----
+開発・サポートは [@はるべえ](https://twitter.com/ruyo_h) が個人で対応しています。そのためレスポンスが遅いことがあります。
 
-## 🆕 New Features Added by Off World Live
+## 特徴
+|||
+|----|----|
+|![2](https://github.com/ruyo/VRM4U/wiki/images/shot/03.png)|![2](https://github.com/ruyo/VRM4U/wiki/images/shot/04.png)|
+|![2](https://github.com/ruyo/VRM4U/wiki/images/shot/01.png)|![2](https://github.com/ruyo/VRM4U/wiki/images/shot/02.png)|
 
-- 🎛️ **Performance Profile System**  
-  Switchable update modes:  
-  `Performance (30 FPS)`, `Balanced (60 FPS)`, `Streaming (90 FPS)`, `Adaptive`, `Custom (30–120 FPS)`
+ - VRMファイルをインポートできます。
+ - アニメーション
+     - 骨、Morphtarget・BlendShapeGroup、揺れ骨・コリジョン などが生成されます。
+     - 揺れ骨の挙動はVRMSpringBoneかPhysicsAssetを選択できます。
+     - Humanoid用のRIGが生成されるので、アニメーションを手軽にリターゲット可能です。
+ - マテリアル
+     - MToonを再現したマテリアル。影色の指定や、アウトラインの色・太さ調整、MatCapなど一通り適用されます。
+     - 既存のPBR背景の中にキャラクタを描画できます。ポストプロセスを利用しません。
+ - モバイル
+     - BoneMapリダクションを使うことで、公式のUE4エディタからモバイルでSkeletalMeshを利用できます。
+     - 描画はForward/Deferred両方に対応しています。
 
-- 🤖 **Auto-Populate Bone Mapping**  
-  Automatically detects major skeleton types and populates bone mappings
+## 動作環境
+ - UE5.4〜5.0, UE4.27〜UE4.20
+ - Windows
+ - Mac(要プロジェクトビルド)
+ - mobile(Android, iOS)
+ - UE4.19も動きますが、マテリアルは生成されません。
 
-- 🔧 **Custom Bone Overrides**  
-  Manually fine-tune bone mapping per skeleton
+## 使い方
+- [releases](https://github.com/ruyo/VRM4U/releases/latest)より利用するバージョンのプラグインをダウンロードし、「.uproject」とおなじ場所に「Plugins」フォルダを展開、以下のように配置ください
 
----
+```
+ + MyProject
+   - MyProject.uproject
+   - Plugins
+     - VRM4U
+       - VRM4U.uplugin
+```
 
-## 🔑 Core Features
+### サンプルマップ
+- VRM4UContent/Maps/VRM4U_sample.umap
+- ContentBrowserに表示されない場合は、以下の項目を確認ください。
+![3](https://raw.githubusercontent.com/wiki/ruyo/VRM4U/images/samplemap.png)
 
-- 🧍‍♂️ Markerless Full-Body Mocap via **MediaPipe** (XR Animator)  
-- 📡 Real-time VMC Protocol support (OSC-based streaming)  
-- 🔄 VrmVMC node now works with **non-VRM skeletons**  
+### 使い方
+- VRMファイルをドラッグ＆ドロップしてください
 
-
-## 🛠 How It Works
-
-### What is VRM4U?
-
-- UE plugin that enables use of VRM avatars
-- Includes the simplified `VrmVMC` node to receive live VMC motion data
-- Now supports Unreal Engine 5.6
-
-### What is XR Animator?
-
-- Open-source markerless mocap tool powered by **MediaPipe**
-- Sends motion via **VMC Protocol**, an OSC-based real-time mocap format
-
----
-
-## 🔄 Extended Compatibility
-
-Using an extended `Vrm Meta Object`, the updated VrmVMC node now supports:
-
-- 👨‍🎤 Metahuman  
-- 🕺 Mixamo  
-- 👤 Daz Genesis 8  
-- 🧬 Custom skeletons  
-
----
-
-## 🚀 Getting Started
-
-### ✅ Project Setup
-
-1. Download [Off World Live’s fork of VRM4U](https://github.com/Off-World-Live/VRM4U/tree/VRM4U/5.5/CU-8697exa97/metahuman-compatibility)
-2. Create a New Unreal C++ Project
-  - Open Unreal Engine
-  - Choose a C++ template project
-  - Once the project is created successfully, exit Unreal
-3. Extract the downloaded ZIP into the Plugins folder of your project
-4. Right-click on .uproject file and choose Generate Visual Studio Project Files
-5. Open the generated .sln file in Visual Studio, select 'Rebuild Solution'
-6. Launch the Project in Unreal and activate 'VRM4U' in Plugins
+||
+|----|
+|![2](https://github.com/ruyo/VRM4U/wiki/images/overview.gif)|
+|[![](https://img.youtube.com/vi/Qlz0bUSLjss/0.jpg)](https://www.youtube.com/watch?v=Qlz0bUSLjss) https://www.youtube.com/watch?v=Qlz0bUSLjss|
 
 
----
+### 仕組み
+詳しく知りたい方はこちら
+
+https://ruyo.github.io/VRM4U/10_detail/
+
+## 作った人
+[@ruyo_h](https://twitter.com/ruyo_h)
+
+## ライセンス
+
+|||
+|----|----|
+|MIT|VRM4U|
+|MIT|[RapidJSON](https://github.com/Tencent/rapidjson/)|
+|3-clause BSD-License|[assimp(orig)](https://github.com/assimp/assimp), [assimp(vrm4u fork)](https://github.com/ruyo/assimp)|
+
+### ソースが必要なケース＆入手方法
+
+- Windows向け
+    - 特別な操作は不要です。zipを展開 or このリポジトリをクローンして利用ください。(assimpはビルド済のlibが入っています)
+- Mac向け
+    - カスタム版assimpのソース取得＆ビルドが必要です
+- モバイル向け
+    - 一般的な利用方法であれば、特別な操作は不要です。
+    - ランタイムロードを利用する場合は カスタム版assimpのソース取得＆ビルドが必要です。
+
+カスタム版assimpは[こちら](https://github.com/ruyo/assimp)より入手ください
+
+- 2023/11以前のプラグインを利用する場合
+    - こちらより昔のソースを取得ください https://github.com/ruyo/UnrealEngine_VRM4UPlugin
+    -  （404エラーページが出る場合は[こちらより紐付けをしてください](https://www.unrealengine.com/ja/blog/updated-authentication-process-for-connecting-epic-github-accounts)）
+
+## 開発支援
+
+VRM4Uの開発を支援したい という奇特な方は[こちら](https://ruyo.booth.pm/items/1707224)からどうぞ
+
+
+公開の体裁を含め 多くの方の情報を参考にさせて頂いています。  
+ありがとうございます。
 
 ### リリース履歴
 - 2025/11/13
@@ -474,129 +497,3 @@ Using an extended `Vrm Meta Object`, the updated VrmVMC node now supports:
     - VMC Protocolに対応した。
     - VRM1:インポート時の正規化（ローカル軸の破棄）をオプションで選択可能にした。データ的にはVRM0と同じ状態で読み込める。
 - これ以前のものはこちら → https://github.com/ruyo/VRM4U/wiki/CHANGELOG
-
-### Step 1: Create a Vrm Meta Object
-
-Navigate to: `Content > Plugins > VRM4U`  
-Filter: `Type = VrmMetaObject`  
-Duplicate or create a new one.
-
-![Step 1](Docs/image2.png)
-
----
-
-### Step 2: Configure the Meta Object
-
-- Double-click to open
-- In the **Details Panel**, set:
-  - **Target Skeletal Mesh**
-  - **Skeleton Type**, choose from:
-    - `Auto` (recommended)
-    - `VRM/VRoid`
-    - `Metahuman`
-    - `Mixamo`
-    - `Daz`
-    - `Other` (for custom rigs)
-  - Click **Auto Populate**
-
-![Meta Object Config](Docs/image4.png)
-
----
-
-### Step 3: Save and Rename
-
-Save the asset (e.g. `Mixamo_Meta`).
-
-![Save Meta](Docs/image3.png)
-
----
-
-### Step 4: Create an Animation Blueprint
-
-- Create and name it (e.g. `ABP_Mixamo`)
-- In the **Anim Graph**:
-  - Add the `VrmVMC` node
-  - Assign your Vrm Meta Object
-  - Connect pose pins
-
-![Anim Blueprint](Docs/image5.png)  
-![Connect Meta](Docs/image8.png)
-
----
-
-### Step 5: Fine-tune for Each Rig
-
-Use `Transform (Modify) Bone` nodes if needed.  
-Tweak settings for better performance and accuracy:
-
-- ✅ Ignore Local Rotation  
-- ✅ Use Remote Center Pos  
-- ✅ Apply Perfect Sync *(ARKit support)*  
-
-![Transform Bone Node](Docs/image6.png)
-
----
-
-## ⚙️ Performance Configuration
-
-Configure VrmVMC node's performance under "Update Mode":
-
-| Mode        | Description                                 |
-|-------------|---------------------------------------------|
-| **Performance** | 30 FPS – Best performance |
-| **Balanced**    | 60 FPS – Good quality/performance tradeoff |
-| **Streaming**   | 90 FPS – High fidelity for streaming |
-| **Adaptive**    | Dynamically adjusts from 30–90 FPS |
-| **Custom**      | Manually set update rate (30–120 FPS) |
-
----
-
-## 🧪 Troubleshooting
-
-### Auto-Populate Issues
-- ❌ No bones mapped? → Check the mesh and skeleton type
-- ❌ Critical bones missing? → Use **Custom Bone Overrides**
-- ❌ Wrong skeleton type? → Set type manually (don’t use Auto)
-
-### Performance Issues
-- Use **Performance Mode** for low-spec machines
-- Use **Adaptive Mode** for dynamic control
-- Lower custom rate if using **Custom Mode**
-
-### Bone Mapping Issues
-- Check **Output Log** for bone mapping status
-- Use **Custom Bone Overrides** for manual remaps:
-  - `Humanoid Bone Name` → e.g., `"leftHand"`
-  - `Model Bone Name` → e.g., `"hand_l"`
-
----
-
-## 🔗 Resources
-
-- [VRM4U GitHub](https://github.com/ruyo/VRM4U)  
-- [XR Animator GitHub](https://github.com/ButzYung/SystemAnimatorOnline)  
-- [Off World Live VRM4U Fork](https://github.com/Off-World-Live/VRM4U)
-
----
-
-## 🙌 Community & Contributions
-
-We welcome PRs and community involvement!  
-Fork, extend, or contribute to the repo to help expand support and features.
-
----
-
-## 📄 License
-
-This project is open source.  
-Each component is under its own license:
-- VRM4U: MIT
-- XR Animator: Apache or as listed on the repo
-
-Check each repo for full license details.
-
----
-
-## 📬 Contact
-
-Open issues on GitHub or join the Off World Live community to ask questions or collaborate.
