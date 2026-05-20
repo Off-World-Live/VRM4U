@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #pragma once
 
@@ -440,7 +440,7 @@ public:
 	bool bGenerateOutlineMaterial = true;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRM4U")
-	bool bMergeMaterial = true;
+	bool bMergeMaterial = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRM4U")
 	bool bMergePrimitive = false;

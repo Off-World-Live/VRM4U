@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #include "VrmBPFunctionLibrary.h"
 #include "Materials/MaterialInterface.h"
@@ -7,12 +7,14 @@
 #include "Engine/Engine.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/SkeletalMesh.h"
-#include "Logging/MessageLog.h"
 #include "Engine/Canvas.h"
+#include "Engine/GameViewportClient.h"
+#include "Logging/MessageLog.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Animation/MorphTarget.h"
 #include "Misc/EngineVersionComparison.h"
+
 #if	UE_VERSION_OLDER_THAN(4,26,0)
 #include "AssetRegistryModule.h"
 #include "ARFilter.h"
@@ -31,6 +33,11 @@
 #include "Rendering/SkeletalMeshModel.h"
 
 #include "VrmRigHeader.h"
+
+#if	UE_VERSION_OLDER_THAN(5,2,0)
+#else
+#include "RenderCounters.h"
+#endif
 
 #if	UE_VERSION_OLDER_THAN(5,5,0)
 #else
@@ -1942,6 +1949,47 @@ bool UVrmBPFunctionLibrary::VRMIsEditorPreviewObject(const UObject* obj) {
 	}
 
 	return false;
+}
+
+void UVrmBPFunctionLibrary::VRMGetViewportSize(FIntPoint & ViewportSize, FIntPoint & BufferSize){
+
+	ViewportSize = FIntPoint(0, 0);
+
+#if WITH_EDITOR
+	bool b1, b2, b3;
+	VRMGetPlayMode(b1, b2, b3);
+
+	bool bGameView = b1;
+	if (b2) {
+		bGameView = false;
+	}
+
+	if (GEditor == nullptr) bGameView = true;
+	if (GEditor->GetActiveViewport() == nullptr) bGameView = true;
+
+	if (bGameView == false) {
+		ViewportSize = GEditor->GetActiveViewport()->GetRenderTargetTextureSizeXY();
+		return;
+	}
+#endif
+
+	if (GEngine == nullptr) return;
+	if (GEngine->GameViewport == nullptr) return;
+	if (GEngine->GameViewport->Viewport == nullptr) return;
+
+	FViewport* Viewport = GEngine->GameViewport->Viewport;
+	ViewportSize = Viewport->GetRenderTargetTextureSizeXY();
+
+#if	UE_VERSION_OLDER_THAN(5,6,0)
+	float ScreenPercentage = FMath::Clamp(UKismetSystemLibrary::GetConsoleVariableFloatValue("r.ScreenPercentage"), 0.f, 1.f);
+	BufferSize = FIntPoint (
+		FMath::RoundToInt(ViewportSize.X * ScreenPercentage / 100.0f),
+		FMath::RoundToInt(ViewportSize.Y * ScreenPercentage / 100.0f)
+	);
+#else
+	BufferSize = GPixelRenderCounters.GetRenderResolution();
+#endif
+
 }
 
 

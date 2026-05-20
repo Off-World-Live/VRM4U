@@ -1,4 +1,4 @@
-﻿// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+﻿// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #include "VrmConvertIKRig.h"
 #include "VrmConvert.h"
@@ -85,9 +85,19 @@ namespace {
 #else
 			sol_index = rigcon->AddSolver(FIKRigFullBodyIKSolver::StaticStruct());
 			sol = rigcon->GetSolverAtIndex(sol_index);
+			if (sol) {
+				auto* sc = Cast<UIKRigFBIKController>(rigcon->GetSolverController(sol_index));
+				if (sc) {
+					auto s = sc->GetSolverSettings();
+					s.RootBehavior = EPBIKRootBehavior::PinToInput;
+					s.GlobalPullChainAlpha = 0;
+					sol->SetSolverSettings(&s);
+				}
+			}
 #endif
 		}
 		if (sol == nullptr) return;
+
 
 #if UE_VERSION_OLDER_THAN(5,4,0)
 		sol->SetEnabled(false);
@@ -390,9 +400,9 @@ namespace {
 							UIKRig_PBIKBoneSettings* s = Cast<UIKRig_PBIKBoneSettings>(sol->GetBoneSetting(*t.Value));
 							if (s == nullptr) continue;
 
-							s->bUsePreferredAngles = true;
+							//s->bUsePreferredAngles = true;
 							if (i == 4 || i == 5) {
-								s->PreferredAngles.Set(-180, 0, 0);
+								//s->PreferredAngles.Set(-180, 0, 0);
 							}
 							else {
 								s->PreferredAngles.Set(180, 0, 0);
@@ -404,7 +414,7 @@ namespace {
 							auto* sc = Cast<UIKRigFBIKController>(rigcon->GetSolverController(sol_index));
 							if (sc) {
 								auto settings = sc->GetBoneSettings(*t.Value);
-								settings.bUsePreferredAngles = true;
+								//settings.bUsePreferredAngles = true;
 								if (i == 4 || i == 5) {
 									settings.PreferredAngles.Set(-180, 0, 0);
 								}
@@ -869,24 +879,15 @@ public:
 #if WITH_EDITOR
 #if UE_VERSION_OLDER_THAN(5,6,0)
 #else
-static UIKRigDefinition* GenerateMannequinIK(UVrmAssetListObject* vrmAssetList) {
-
-	TArray<FString> MannyAssetNameList;
-	MannyAssetNameList.Add(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple"));
-	MannyAssetNameList.Add(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny.SKM_Manny"));
-	MannyAssetNameList.Add(TEXT("/Game/Characters/UE5_Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple"));
-	MannyAssetNameList.Add(TEXT("/Game/Characters/UE5_Mannequins/Meshes/SKM_Manny.SKM_Manny"));
+static UIKRigDefinition* GenerateMannequinIK(UVrmAssetListObject* vrmAssetList, FString path_forSK, FString Footer) {
 
 	UObject* u = nullptr;
-	for (auto manny : MannyAssetNameList) {
-		FSoftObjectPath r2(manny);
+	{
+		FSoftObjectPath r2(path_forSK);
 		u = r2.TryLoad();
-		if (u != nullptr) {
-			break;
-		}
-	}
 
-	if (u == nullptr) return nullptr;
+		if (u == nullptr) return nullptr;
+	}
 
 	USkeletalMesh* sk = nullptr;
 	if (u) {
@@ -897,7 +898,7 @@ static UIKRigDefinition* GenerateMannequinIK(UVrmAssetListObject* vrmAssetList) 
 	}
 	if (sk == nullptr) return nullptr;
 
-	FString name = FString(TEXT("IK_")) + TEXT("Default") + TEXT("_Mannequin");
+	FString name = FString(TEXT("IK_")) + TEXT("VRM4U_") + Footer;
 
 	UIKRigDefinition* rig_ik = nullptr;
 	{
@@ -1024,8 +1025,9 @@ static UIKRigDefinition* GenerateMannequinIK(UVrmAssetListObject* vrmAssetList) 
 					auto settings = sc->GetBoneSettings(boneName);
 					settings.X = EPBIKLimitType::Locked;
 					settings.Y = EPBIKLimitType::Locked;
+					settings.RotationStiffness = 0.5f;
 					settings.bUsePreferredAngles = true;
-					settings.PreferredAngles.Set(0, 0, 90);
+					settings.PreferredAngles.Set(0, 0, 45);
 					sc->SetBoneSettings(boneName, settings);
 				}
 			}
@@ -1041,7 +1043,11 @@ static UIKRigDefinition* GenerateMannequinIK(UVrmAssetListObject* vrmAssetList) 
 				auto* sc = Cast<UIKRigFBIKController>(rigcon->GetSolverController(sol_index));
 				if (sc) {
 					auto settings = sc->GetBoneSettings(boneName);
-					settings.RotationStiffness = 0.85f;
+					settings.X = EPBIKLimitType::Locked;
+					settings.Y = EPBIKLimitType::Locked;
+					settings.RotationStiffness = 0.5f;
+					settings.bUsePreferredAngles = true;
+					settings.PreferredAngles.Set(0, 0, 45);
 					sc->SetBoneSettings(boneName, settings);
 				}
 			}
@@ -1058,12 +1064,12 @@ static UIKRigDefinition* GenerateMannequinIK(UVrmAssetListObject* vrmAssetList) 
 			rigcon->ConnectGoalToSolver(goal, sol_index);
 		}
 		{
-			auto goal = rigcon->AddNewGoal(TEXT("RightFootIK"), TEXT("ball_r"));
+			auto goal = rigcon->AddNewGoal(TEXT("RightFootIK"), TEXT("foot_r"));
 			rigcon->SetRetargetChainGoal(TEXT("RightLeg"), goal);
 			rigcon->ConnectGoalToSolver(goal, sol_index);
 		}
 		{
-			auto goal = rigcon->AddNewGoal(TEXT("LeftFootIK"), TEXT("ball_l"));
+			auto goal = rigcon->AddNewGoal(TEXT("LeftFootIK"), TEXT("foot_l"));
 			rigcon->SetRetargetChainGoal(TEXT("LeftLeg"), goal);
 			rigcon->ConnectGoalToSolver(goal, sol_index);
 		}
@@ -1312,8 +1318,9 @@ bool VRMConverter::ConvertIKRig(UVrmAssetListObject *vrmAssetList) {
 				}
 
 				for (auto& t : table) {
-					if ((t.mask & (1 << ik_no)) == 0) {
-						continue;
+					if ((t.mask & (1 << 1)) == 0) {
+					//if ((t.mask & (1 << ik_no)) == 0) {
+							continue;
 					}
 					if (AddedChainList.Contains(t.chain)) {
 						continue;
@@ -1370,7 +1377,8 @@ bool VRMConverter::ConvertIKRig(UVrmAssetListObject *vrmAssetList) {
 						AddedChainList.Add(t.chain);
 					}
 				}
-				rigcon.LocalSolverSetup(vrmAssetList, ik_no);
+				//rigcon.LocalSolverSetup(vrmAssetList, ik_no);
+				rigcon.LocalSolverSetup(vrmAssetList, 1);
 
 				for (auto& modelName : vrmAssetList->VrmMetaObject->humanoidBoneTable) {
 					if (modelName.Key == "" || modelName.Value == "") {
@@ -1390,6 +1398,8 @@ bool VRMConverter::ConvertIKRig(UVrmAssetListObject *vrmAssetList) {
 			struct RTGdata{
 				FString NewAssetName;
 				TArray<FString> BaseIKRigName;
+				FString BaseSKName;
+				FString GenerateFooter;
 				int ModelType;
 			};
 
@@ -1405,13 +1415,30 @@ bool VRMConverter::ConvertIKRig(UVrmAssetListObject *vrmAssetList) {
 			rtgDataTable[1].BaseIKRigName.Add(TEXT("/Game/Characters/UE4_Mannequin/Rigs/IK_UE4_Mannequin_Retarget.IK_UE4_Mannequin_Retarget"));
 			rtgDataTable[2].BaseIKRigName.Add(TEXT("/Game/Characters/UEFN_Mannequin/Rigs/IK_UEFN_Mannequin.IK_UEFN_Mannequin"));
 
-			rtgDataTable[0].ModelType = 0;	// mannnequin
-			rtgDataTable[1].ModelType = 0;	// mannnequin
+			rtgDataTable[0].BaseSKName = TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple");
+			rtgDataTable[1].BaseSKName = TEXT("/Game/Characters/UE4_Mannequin/Meshes/SK_UE4_Mannequin.SK_UE4_Mannequin");
+			rtgDataTable[2].BaseSKName = "";
+
+
+			rtgDataTable[0].GenerateFooter = TEXT("UE5Mannequin");
+			rtgDataTable[1].GenerateFooter = TEXT("UE4Mannequin");
+			rtgDataTable[2].GenerateFooter = "";
+
+			rtgDataTable[0].ModelType = 0;	// mannnequin UE5
+			rtgDataTable[1].ModelType = 0;	// mannnequin UE4
 			rtgDataTable[2].ModelType = 1;	// UEFN mannnequin
+
+			bool bGenerated[3] = {};
+
 
 			for (int ikr_no = 0; ikr_no < 3; ikr_no++) {
 
+
 				RTGdata& rtgData = rtgDataTable[ikr_no];
+
+				if (bGenerated[ikr_no]) {
+					continue;
+				}
 
 				auto *vrm_ikrig = table_rig_ik[rtgData.ModelType];
 
@@ -1424,12 +1451,14 @@ bool VRMConverter::ConvertIKRig(UVrmAssetListObject *vrmAssetList) {
 						break;
 					}
 				}
+
 				if (uobjectIK == nullptr) {
 					if (ikr_no == 0) {
 #if WITH_EDITOR
 #if UE_VERSION_OLDER_THAN(5,6,0)
 #else
-						uobjectIK = GenerateMannequinIK(vrmAssetList);
+						// IKRig 生成
+						uobjectIK = GenerateMannequinIK(vrmAssetList, rtgDataTable[ikr_no].BaseSKName, rtgDataTable[ikr_no].GenerateFooter);
 #endif
 #endif
 					}
@@ -1609,7 +1638,9 @@ bool VRMConverter::ConvertIKRig(UVrmAssetListObject *vrmAssetList) {
 #endif
 				}
 				c.SetChainSetting();
-			}
+
+				bGenerated[ikr_no] = true;
+			} // loop
 		}
 #endif // 5.2
 #endif

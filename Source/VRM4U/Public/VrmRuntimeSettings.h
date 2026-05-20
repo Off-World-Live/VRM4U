@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #pragma once
 
@@ -39,6 +39,10 @@ class VRM4U_API UVrmRuntimeSettings : public UObject
 		ExactClass = false
 		))
 	FSoftObjectPath AssetListObject;
+
+	/** Skip VRM validation check on import */
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	bool bSkipValidationOnImport = false;
 
 	/** priority<100 for VRM4U. Default plugins priority=100 */
 	UPROPERTY(config, EditAnywhere, Category = Settings, meta = (
