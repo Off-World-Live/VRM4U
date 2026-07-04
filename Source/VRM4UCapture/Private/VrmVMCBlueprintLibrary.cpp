@@ -195,6 +195,14 @@ namespace
 	}
 }
 
+// Thin-forwarder guard: resolve the mesh's VMC node, or return false.
+#define VMC_RESOLVE_NODE_OR_RETURN_FALSE(NodeVar, Comp) \
+	FAnimNode_VrmVMC* NodeVar = ResolveNode(Comp);       \
+	if ((NodeVar) == nullptr)                            \
+	{                                                    \
+		return false;                                    \
+	}
+
 // =============================================================================
 // Mapping inspection
 // =============================================================================
@@ -256,22 +264,14 @@ bool UVrmVMCBlueprintLibrary::GetMappedBoneIndex(USkeletalMeshComponent* SkelMes
 bool UVrmVMCBlueprintLibrary::GetVMCBoneTransformComponent(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                            FTransform& OutTransform)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->TryGetLastAppliedTransform(HumanoidName.ToString(), OutTransform);
 }
 
 bool UVrmVMCBlueprintLibrary::GetVMCBoneTransformLocal(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                        FTransform& OutTransform)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 
 	FTransform Self;
 	if (!Node->TryGetLastAppliedTransform(HumanoidName.ToString(), Self))
@@ -301,11 +301,7 @@ bool UVrmVMCBlueprintLibrary::GetVMCBoneTransformLocal(USkeletalMeshComponent* S
 bool UVrmVMCBlueprintLibrary::GetVMCBoneTransformWorld(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                        FTransform& OutTransform)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 
 	FTransform ComponentTransform;
 	if (!Node->TryGetLastAppliedTransform(HumanoidName.ToString(), ComponentTransform))
@@ -679,33 +675,21 @@ bool UVrmVMCBlueprintLibrary::IsSnapshotValid(const FVrmVMCPoseSnapshot& Snapsho
 bool UVrmVMCBlueprintLibrary::SetPreRebaseRotation(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                    FQuat Rotation)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->SetPreRebaseRotation(HumanoidName.ToString(), Rotation);
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::ClearPreRebaseRotation(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearPreRebaseRotation(HumanoidName.ToString());
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::ClearAllPreRebaseOverrides(USkeletalMeshComponent* SkelMeshComp)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearAllPreRebaseOverrides();
 	return true;
 }
@@ -717,33 +701,21 @@ bool UVrmVMCBlueprintLibrary::ClearAllPreRebaseOverrides(USkeletalMeshComponent*
 bool UVrmVMCBlueprintLibrary::SetPostRebaseRotation(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                     FQuat Rotation)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->SetPostRebaseRotation(HumanoidName.ToString(), Rotation);
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::ClearPostRebaseRotation(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearPostRebaseRotation(HumanoidName.ToString());
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::ClearAllPostRebaseOverrides(USkeletalMeshComponent* SkelMeshComp)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearAllPostRebaseOverrides();
 	return true;
 }
@@ -754,32 +726,20 @@ bool UVrmVMCBlueprintLibrary::ClearAllPostRebaseOverrides(USkeletalMeshComponent
 
 bool UVrmVMCBlueprintLibrary::SetBoneMasked(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName, bool bMasked)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->SetBoneMasked(HumanoidName.ToString(), bMasked);
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::IsBoneMasked(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->IsBoneMasked(HumanoidName.ToString());
 }
 
 bool UVrmVMCBlueprintLibrary::ClearAllMasks(USkeletalMeshComponent* SkelMeshComp)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearAllMasks();
 	return true;
 }
@@ -790,53 +750,33 @@ bool UVrmVMCBlueprintLibrary::ClearAllMasks(USkeletalMeshComponent* SkelMeshComp
 
 bool UVrmVMCBlueprintLibrary::IsPreRebaseOverridden(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->IsPreRebaseOverridden(HumanoidName.ToString());
 }
 
 bool UVrmVMCBlueprintLibrary::IsPostRebaseOverridden(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->IsPostRebaseOverridden(HumanoidName.ToString());
 }
 
 bool UVrmVMCBlueprintLibrary::GetPreRebaseRotation(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                    FQuat& OutRotation)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->TryGetPreRebaseRotation(HumanoidName.ToString(), OutRotation);
 }
 
 bool UVrmVMCBlueprintLibrary::GetPostRebaseRotation(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName,
                                                     FQuat& OutRotation)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->TryGetPostRebaseRotation(HumanoidName.ToString(), OutRotation);
 }
 
 bool UVrmVMCBlueprintLibrary::ClearBoneState(USkeletalMeshComponent* SkelMeshComp, FName HumanoidName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearBoneState(HumanoidName.ToString());
 	return true;
 }
@@ -848,86 +788,54 @@ bool UVrmVMCBlueprintLibrary::ClearBoneState(USkeletalMeshComponent* SkelMeshCom
 bool UVrmVMCBlueprintLibrary::GetLastAppliedCurveValue(USkeletalMeshComponent* SkelMeshComp, FName CurveName,
                                                        float& OutValue)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->TryGetLastAppliedCurveValue(CurveName.ToString(), OutValue);
 }
 
 bool UVrmVMCBlueprintLibrary::SetCurveOverride(USkeletalMeshComponent* SkelMeshComp, FName CurveName, float Value)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->SetCurveOverride(CurveName.ToString(), Value);
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::ClearCurveOverride(USkeletalMeshComponent* SkelMeshComp, FName CurveName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearCurveOverride(CurveName.ToString());
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::ClearAllCurveOverrides(USkeletalMeshComponent* SkelMeshComp)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearAllCurveOverrides();
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::SetCurveMasked(USkeletalMeshComponent* SkelMeshComp, FName CurveName, bool bMasked)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->SetCurveMasked(CurveName.ToString(), bMasked);
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::IsCurveMasked(USkeletalMeshComponent* SkelMeshComp, FName CurveName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->IsCurveMasked(CurveName.ToString());
 }
 
 bool UVrmVMCBlueprintLibrary::ClearAllCurveMasks(USkeletalMeshComponent* SkelMeshComp)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	Node->ClearAllCurveMasks();
 	return true;
 }
 
 bool UVrmVMCBlueprintLibrary::IsCurveOverridden(USkeletalMeshComponent* SkelMeshComp, FName CurveName)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	return Node->IsCurveOverridden(CurveName.ToString());
 }
 
@@ -937,11 +845,7 @@ bool UVrmVMCBlueprintLibrary::IsCurveOverridden(USkeletalMeshComponent* SkelMesh
 
 bool UVrmVMCBlueprintLibrary::GetRigServer(USkeletalMeshComponent* SkelMeshComp, FString& OutAddress, int32& OutPort)
 {
-	FAnimNode_VrmVMC* Node = ResolveNode(SkelMeshComp);
-	if (Node == nullptr)
-	{
-		return false;
-	}
+	VMC_RESOLVE_NODE_OR_RETURN_FALSE(Node, SkelMeshComp);
 	OutAddress = Node->ServerAddress;
 	OutPort = Node->Port;
 	return true;
@@ -1085,3 +989,5 @@ TArray<FString> UVrmVMCBlueprintLibrary::GetHumanoidNameOptions()
 	};
 	return Options;
 }
+
+#undef VMC_RESOLVE_NODE_OR_RETURN_FALSE

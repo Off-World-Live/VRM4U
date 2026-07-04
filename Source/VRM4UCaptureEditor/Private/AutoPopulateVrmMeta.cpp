@@ -177,18 +177,13 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 
 namespace
 {
-	// One humanoid slot and the skeleton bones that may fill it, tried in order
-	// (first present in the skeleton wins). Multiple candidates fold the old
-	// per-exporter fallback passes into a single data-driven lookup.
 	struct FVrmBoneMapEntry
 	{
 		FString HumanoidName;
-		TArray<FString> Candidates;
+		TArray<FString> Candidates; // tried in order; first present in the skeleton wins
 		bool bIsCritical;
 	};
 
-	// Collect every bone name in the mesh's skeleton. Logs and returns false when
-	// the skeleton is unavailable (Context names the caller for the log line).
 	bool BuildAvailableBoneSet(USkeletalMesh* InSkeletalMesh, const TCHAR* Context, TSet<FName>& OutBones)
 	{
 		USkeleton* Skeleton = VRMGetSkeleton(InSkeletalMesh);
@@ -207,9 +202,6 @@ namespace
 		return true;
 	}
 
-	// Map each humanoid slot to the first candidate present in the skeleton,
-	// tracking critical-bone coverage and emitting the standard summary log.
-	// Returns true when at least one bone mapped.
 	bool ApplyBoneMap(UVrmMetaObject* InMetaObject, const TSet<FName>& AvailableBones,
 		const TArray<FVrmBoneMapEntry>& BoneMap, const TCHAR* Context)
 	{
@@ -278,8 +270,7 @@ bool UAutoPopulateVrmMeta::PopulateForVRM(UVrmMetaObject* InMetaObject, USkeleta
 		return false;
 	}
 
-	// VRoid exports use J_Bip prefixed names; other VRM exporters use the plain
-	// humanoid slot name or a "vrm_" prefix. Try each per bone, prefixed first.
+	// VRoid uses J_Bip prefixes; other exporters use the plain name or a "vrm_" prefix.
 	struct FSeed { const TCHAR* Humanoid; const TCHAR* Prefixed; bool bCritical; };
 	static const FSeed Seeds[] = {
 		{TEXT("hips"), TEXT("J_Bip_C_Hips"), true},
@@ -465,10 +456,8 @@ bool UAutoPopulateVrmMeta::PopulateForMetaHuman(UVrmMetaObject* InMetaObject, US
 		return false;
 	}
 
-	// A MetaHuman body wears one of two skeletons: the "standard" (Mixamo-like)
-	// naming or Epic's engine skeleton. Detection picks the matching table; the
-	// two name sets never collide, so they stay separate rather than merging into
-	// per-bone candidates (which would blur the Head/head case distinction).
+	// Two disjoint skeletons (standard/Mixamo-like vs Epic); kept as separate
+	// tables rather than merged candidates to preserve Head vs head casing.
 	const bool bIsStandardMetaHuman = AvailableBones.Contains(FName("Hips")) &&
 		AvailableBones.Contains(FName("Spine1")) &&
 		AvailableBones.Contains(FName("LeftArm"));
@@ -632,10 +621,7 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 		return false;
 	}
 
-	// Genesis 8 names come first; older/pre-G8 and underscore-style exports
-	// (hip/abdomen/lShldr, l_upperarm, ...) follow as fallbacks. First present in
-	// the skeleton wins, so a G8 rig maps identically to the old primary pass and
-	// older rigs pick up the alternates without ever regressing a G8 match.
+	// Genesis 8 names first, older/underscore exports as fallbacks; first present wins.
 	const TArray<FVrmBoneMapEntry> BoneMap = {
 		{TEXT("hips"), {TEXT("pelvis"), TEXT("hip")}, true},
 		{TEXT("spine"), {TEXT("abdomenLower"), TEXT("abdomen")}, true},
