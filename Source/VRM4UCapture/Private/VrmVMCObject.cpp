@@ -41,12 +41,17 @@ void UVrmVMCObject::CreateServer(FString inName, uint16 inPort)
 #else
 	OSCServer.Reset(UOSCManager::CreateOSCServer(ServerName, port, true, true, FString(), this));
 
-	OSCServer->OnOscMessageReceivedNative.RemoveAll(nullptr);
-	OSCServer->OnOscMessageReceivedNative.AddUObject(this, &UVrmVMCObject::OSCReceivedMessageEvent);
+	// CreateOSCServer returns null if the port is already bound (e.g. another VMC
+	// receiver on the same port). Guard before binding/ticking to avoid a null deref.
+	if (OSCServer.IsValid())
+	{
+		OSCServer->OnOscMessageReceivedNative.RemoveAll(nullptr);
+		OSCServer->OnOscMessageReceivedNative.AddUObject(this, &UVrmVMCObject::OSCReceivedMessageEvent);
 
 #if WITH_EDITOR
-	OSCServer->SetTickInEditor(true);
+		OSCServer->SetTickInEditor(true);
 #endif // WITH_EDITOR
+	}
 #endif
 }
 
@@ -60,6 +65,9 @@ void UVrmVMCObject::OSCReceivedMessageEvent(const FOSCMessage& Message, const FS
 	{
 		return;
 	}
+
+	// Wire-level liveness timestamp, used by debug tooling.
+	LastPacketReceivedTime = FPlatformTime::Seconds();
 
 	// Process bone/root position messages
 	if (addressPath == TEXT("/VMC/Ext/Root/Pos") || addressPath == TEXT("/VMC/Ext/Bone/Pos"))

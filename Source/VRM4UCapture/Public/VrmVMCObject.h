@@ -75,6 +75,12 @@ public:
 	float UpdateThrottleTime = 1.0f / 60.0f;
 	bool bAdaptiveThrottling = false;
 
+	// Packet arrival timestamp. Bumped on every received VMC OSC message
+	// before any throttle logic, so this reflects true wire-level liveness
+	// independent of the throttled flush cadence. 0.0 means no packet has
+	// ever been received on this server.
+	double LastPacketReceivedTime = 0.0;
+
 	void CreateServer(FString name, uint16 port);
 	void DestroyServer();
 	void OSCReceivedMessageEvent(const FOSCMessage& Message, const FString& IPAddress, uint16 Port);

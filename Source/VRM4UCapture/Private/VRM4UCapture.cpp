@@ -5,6 +5,7 @@
 #include "VRM4UCaptureLog.h"
 #include "Modules/ModuleManager.h"
 #include "Internationalization/Internationalization.h"
+#include "OWLVrmVMCNodeRegistry.h"
 
 #define LOCTEXT_NAMESPACE "VRM4UMisc"
 
@@ -18,10 +19,12 @@ class FVRM4UCaptureModule : public FDefaultModuleImpl
 public:
 	virtual void StartupModule() override
 	{
+		FOWLVrmVMCNodeRegistry::Initialize();
 	}
 
 	virtual void ShutdownModule() override
 	{
+		FOWLVrmVMCNodeRegistry::Shutdown();
 	}
 };
 
