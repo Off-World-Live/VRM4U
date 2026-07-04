@@ -327,14 +327,17 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 
 	{
 		{
-			// Resolve VMC root translation once. VMC streams send a "root" entry alongside
-			// humanoid bones via /VMC/Ext/Root/Pos. Default to zero when absent.
+			// Resolve the VMC "root" stream entry once (/VMC/Ext/Root/Pos). Absent on some senders.
 			FVector VmcRootTranslation = FVector::ZeroVector;
+			FTransform VmcRootTransform = FTransform::Identity;
+			bool bHasVmcRoot = false;
 			for (const auto& a : BoneTrans)
 			{
 				if (a.Key.Compare(TEXT("root"), ESearchCase::IgnoreCase) == 0)
 				{
+					VmcRootTransform = a.Value;
 					VmcRootTranslation = a.Value.GetLocation();
+					bHasVmcRoot = true;
 					break;
 				}
 			}
@@ -386,7 +389,9 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 					if (bUseRemoteCenterPos)
 					{
 						FVector v = f.Transform.GetLocation() * ModelRelativeScale;
-						f.Transform.SetTranslation(v + VmcRootTranslation);
+						// Fold root motion into hips only when hips is the skeleton root;
+						// otherwise it drives the separate root bone (index 0) below.
+						f.Transform.SetTranslation(index == 0 ? v + VmcRootTranslation : v);
 					}
 					else
 					{
@@ -457,6 +462,19 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 
 				tmpOutTransform.Add(f);
 				boneIndexTable.Add(index);
+
+				// Rigs whose hips is not the skeleton root (Mixamo/Mannequin-style)
+				// carry locomotion on a separate root bone; drive it from the stream.
+				if (bIsHumanoidHips && index != 0 && bHasVmcRoot)
+				{
+					const FCompactPoseBoneIndex RootCompactIndex =
+						RequiredBones.GetCompactPoseIndexFromSkeletonIndex(0);
+					if (RootCompactIndex != FCompactPoseBoneIndex(INDEX_NONE))
+					{
+						tmpOutTransform.Add(FBoneTransform(RootCompactIndex, VmcRootTransform));
+						boneIndexTable.Add(0);
+					}
+				}
 			}
 
 			// Flush accumulated last-applied writes under a single lock. BP

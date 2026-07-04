@@ -101,12 +101,15 @@ protected:
 	virtual bool CanRunParallelWork() const { return false; }
 
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+	virtual void NativeUninitializeAnimation() override;
 
 	void CapturePosesForDebug();
 	void AutoResolveSourceAndRetargeter();
 
 	FVrmVMCRetargetAnimInstanceProxy* MyProxy = nullptr;
 	bool bTickPrereqApplied = false;
+	TWeakObjectPtr<USkeletalMeshComponent> PrevSourcePrereq;
+	double AutoResolveRetryIntervalSeconds = 1.0;
 	double LastDebugCaptureTimeSeconds = -1.0e9;
 	double LastAutoResolveTimeSeconds = -1.0e9;
 	double LastResolveFailLogTimeSeconds = -1.0e9;

@@ -40,6 +40,11 @@ void FVrmVMCRetargetAnimInstanceProxy::Initialize(UAnimInstance* InAnimInstance)
 void FVrmVMCRetargetAnimInstanceProxy::UpdateAnimationNode(const FAnimationUpdateContext& InContext)
 {
 	EnsureNode();
+	if (Node_Retarget.Get())
+	{
+		// Drives DeltaTime/RelevancyWeight into the node; without it CacheBones/Evaluate run on stale state.
+		Node_Retarget->Update_AnyThread(InContext);
+	}
 }
 
 void FVrmVMCRetargetAnimInstanceProxy::PreUpdate(UAnimInstance* InAnimInstance, float DeltaSeconds)
@@ -122,12 +127,33 @@ void UVrmVMCRetargetAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	{
 		if (USkeletalMeshComponent* TargetMesh = GetSkelMeshComponent())
 		{
+			if (USkeletalMeshComponent* OldSource = PrevSourcePrereq.Get())
+			{
+				if (OldSource != SourceMeshComponent)
+				{
+					TargetMesh->RemoveTickPrerequisiteComponent(OldSource);
+				}
+			}
 			TargetMesh->AddTickPrerequisiteComponent(SourceMeshComponent);
+			PrevSourcePrereq = SourceMeshComponent;
 			bTickPrereqApplied = true;
 		}
 	}
 
 	CapturePosesForDebug();
+}
+
+void UVrmVMCRetargetAnimInstance::NativeUninitializeAnimation()
+{
+	if (USkeletalMeshComponent* OldSource = PrevSourcePrereq.Get())
+	{
+		if (USkeletalMeshComponent* TargetMesh = GetSkelMeshComponent())
+		{
+			TargetMesh->RemoveTickPrerequisiteComponent(OldSource);
+		}
+		PrevSourcePrereq = nullptr;
+	}
+	Super::NativeUninitializeAnimation();
 }
 
 void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
@@ -144,11 +170,14 @@ void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
 		return;
 	}
 	const double Now = World->GetTimeSeconds();
-	if (Now - LastAutoResolveTimeSeconds < 1.0)
+	if (Now - LastAutoResolveTimeSeconds < AutoResolveRetryIntervalSeconds)
 	{
 		return;
 	}
 	LastAutoResolveTimeSeconds = Now;
+	// Back off on repeated failure so an unresolved instance doesn't rescan the whole
+	// asset registry + world every second forever; reset to the fast interval once resolved.
+	AutoResolveRetryIntervalSeconds = FMath::Min(AutoResolveRetryIntervalSeconds * 2.0, 15.0);
 
 	const FReferenceSkeleton& TargetRef = Target->GetSkeletalMeshAsset()->GetRefSkeleton();
 
@@ -243,17 +272,21 @@ void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
 		}
 	}
 
+	if (Retargeter != nullptr && SourceMeshComponent != nullptr)
+	{
+		AutoResolveRetryIntervalSeconds = 1.0;
+	}
 	// Still unresolved: say so where the user is actually looking. Without this the mesh
 	// just T-poses silently and the cause (missing RTG asset vs missing source rig in the
 	// level) is invisible outside the log.
-	if (Retargeter == nullptr || SourceMeshComponent == nullptr)
+	else
 	{
 		const FString Missing = (Retargeter == nullptr && SourceMeshComponent == nullptr)
 			? TEXT("no IK Retargeter asset matches this mesh, and no source rig found")
 			: (Retargeter == nullptr
 				? TEXT("no IK Retargeter asset matches this mesh (create one, or run VRM4U: Auto-Setup VMC Retarget)")
 				: TEXT("no live source rig matching the retargeter's source IK rig found in this level"));
-		// The resolve retries every second; a persistent failure only needs an occasional
+		// The resolve retries on a backoff; a persistent failure only needs an occasional
 		// log line (the keyed on-screen message below already refreshes continuously).
 		if (Now - LastResolveFailLogTimeSeconds > 10.0)
 		{
