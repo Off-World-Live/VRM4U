@@ -140,6 +140,18 @@ private:
 	UVrmVMCObject* FindServer_NoLock(const FString& ServerAddress, int port) const;
 	UVrmVMCObject* CreateServer_NoLock(const FString& ServerAddress, int port);
 
+	// Per-frame snapshot for the read-only BP getters: on the game thread they
+	// share one deep copy per endpoint per engine frame instead of copying both
+	// VMC maps on every call (an N-bone query was N full copies). Off the game
+	// thread the getter falls back to OffThreadFallback so the cache members stay
+	// single-threaded. Game-thread only.
+	const FVMCData* GetCachedVMCData(const FString& ServerAddress, int Port, FVMCData& OffThreadFallback);
+	FVMCData CachedVMCSnapshot;
+	FString CachedVMCAddress;
+	int CachedVMCPort = -1;
+	uint64 CachedVMCFrame = 0;
+	bool bCachedVMCValid = false;
+
 	// Active face-bridge LiveLink sources by subject name. The LiveLink client owns
 	// the sources; we keep the guid for removal and a weak ptr for status queries.
 	// Game-thread only (Start/Stop are game-thread entry points), so no lock.

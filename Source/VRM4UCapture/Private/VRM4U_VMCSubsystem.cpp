@@ -79,17 +79,43 @@ bool UVRM4U_VMCSubsystem::CopyVMCData(FVMCData& data, FString ServerAddress, int
 	return false;
 }
 
+const FVMCData* UVRM4U_VMCSubsystem::GetCachedVMCData(const FString& ServerAddress, int Port, FVMCData& OffThreadFallback)
+{
+	if (!IsInGameThread())
+	{
+		return CopyVMCData(OffThreadFallback, ServerAddress, Port) ? &OffThreadFallback : nullptr;
+	}
+
+	const uint64 Frame = GFrameCounter;
+	if (bCachedVMCValid && CachedVMCFrame == Frame && CachedVMCPort == Port && CachedVMCAddress == ServerAddress)
+	{
+		return &CachedVMCSnapshot;
+	}
+
+	if (CopyVMCData(CachedVMCSnapshot, ServerAddress, Port) == false)
+	{
+		bCachedVMCValid = false;
+		return nullptr;
+	}
+	CachedVMCAddress = ServerAddress;
+	CachedVMCPort = Port;
+	CachedVMCFrame = Frame;
+	bCachedVMCValid = true;
+	return &CachedVMCSnapshot;
+}
+
 bool UVRM4U_VMCSubsystem::GetVMCData(TMap<FString, FTransform>& BoneData, TMap<FString, float>& CurveData,
                                      FString ServerAddress, int port)
 {
-	FVMCData d;
-	if (CopyVMCData(d, ServerAddress, port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return false;
 	}
 
-	BoneData = d.BoneData;
-	CurveData = d.CurveData;
+	BoneData = Snapshot->BoneData;
+	CurveData = Snapshot->CurveData;
 
 	return true;
 }
@@ -97,14 +123,15 @@ bool UVRM4U_VMCSubsystem::GetVMCData(TMap<FString, FTransform>& BoneData, TMap<F
 bool UVRM4U_VMCSubsystem::GetVMCBoneTransform(const FString ServerAddress, int Port, FName BoneName,
                                               FTransform& OutTransform)
 {
-	FVMCData Snapshot;
-	if (CopyVMCData(Snapshot, ServerAddress, Port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, Port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return false;
 	}
 
 	const FString Key = BoneName.ToString();
-	if (const FTransform* Found = FindCaseInsensitive(Snapshot.BoneData, Key))
+	if (const FTransform* Found = FindCaseInsensitive(Snapshot->BoneData, Key))
 	{
 		OutTransform = *Found;
 		return true;
@@ -150,14 +177,15 @@ bool UVRM4U_VMCSubsystem::GetVMCBoneScale(const FString ServerAddress, int Port,
 TArray<FName> UVRM4U_VMCSubsystem::GetVMCBoneNames(const FString ServerAddress, int Port)
 {
 	TArray<FName> Result;
-	FVMCData Snapshot;
-	if (CopyVMCData(Snapshot, ServerAddress, Port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, Port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return Result;
 	}
 
-	Result.Reserve(Snapshot.BoneData.Num());
-	for (const auto& Pair : Snapshot.BoneData)
+	Result.Reserve(Snapshot->BoneData.Num());
+	for (const auto& Pair : Snapshot->BoneData)
 	{
 		Result.Add(FName(*Pair.Key));
 	}
@@ -167,14 +195,15 @@ TArray<FName> UVRM4U_VMCSubsystem::GetVMCBoneNames(const FString ServerAddress, 
 TMap<FName, FTransform> UVRM4U_VMCSubsystem::GetVMCAllBoneTransforms(const FString ServerAddress, int Port)
 {
 	TMap<FName, FTransform> Result;
-	FVMCData Snapshot;
-	if (CopyVMCData(Snapshot, ServerAddress, Port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, Port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return Result;
 	}
 
-	Result.Reserve(Snapshot.BoneData.Num());
-	for (const auto& Pair : Snapshot.BoneData)
+	Result.Reserve(Snapshot->BoneData.Num());
+	for (const auto& Pair : Snapshot->BoneData)
 	{
 		Result.Add(FName(*Pair.Key), Pair.Value);
 	}
@@ -183,14 +212,15 @@ TMap<FName, FTransform> UVRM4U_VMCSubsystem::GetVMCAllBoneTransforms(const FStri
 
 bool UVRM4U_VMCSubsystem::GetVMCCurveValue(const FString ServerAddress, int Port, FName CurveName, float& OutValue)
 {
-	FVMCData Snapshot;
-	if (CopyVMCData(Snapshot, ServerAddress, Port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, Port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return false;
 	}
 
 	const FString Key = CurveName.ToString();
-	if (const float* Found = FindCaseInsensitive(Snapshot.CurveData, Key))
+	if (const float* Found = FindCaseInsensitive(Snapshot->CurveData, Key))
 	{
 		OutValue = *Found;
 		return true;
@@ -201,14 +231,15 @@ bool UVRM4U_VMCSubsystem::GetVMCCurveValue(const FString ServerAddress, int Port
 TMap<FName, float> UVRM4U_VMCSubsystem::GetVMCAllCurveValues(const FString ServerAddress, int Port)
 {
 	TMap<FName, float> Result;
-	FVMCData Snapshot;
-	if (CopyVMCData(Snapshot, ServerAddress, Port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, Port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return Result;
 	}
 
-	Result.Reserve(Snapshot.CurveData.Num());
-	for (const auto& Pair : Snapshot.CurveData)
+	Result.Reserve(Snapshot->CurveData.Num());
+	for (const auto& Pair : Snapshot->CurveData)
 	{
 		Result.Add(FName(*Pair.Key), Pair.Value);
 	}
@@ -217,14 +248,15 @@ TMap<FName, float> UVRM4U_VMCSubsystem::GetVMCAllCurveValues(const FString Serve
 
 FVector UVRM4U_VMCSubsystem::GetVMCRootTranslation(const FString ServerAddress, int Port)
 {
-	FVMCData Snapshot;
-	if (CopyVMCData(Snapshot, ServerAddress, Port) == false)
+	FVMCData Fallback;
+	const FVMCData* Snapshot = GetCachedVMCData(ServerAddress, Port, Fallback);
+	if (Snapshot == nullptr)
 	{
 		return FVector::ZeroVector;
 	}
 
 	static const FString RootKey(TEXT("root"));
-	if (const FTransform* Found = FindCaseInsensitive(Snapshot.BoneData, RootKey))
+	if (const FTransform* Found = FindCaseInsensitive(Snapshot->BoneData, RootKey))
 	{
 		return Found->GetTranslation();
 	}
