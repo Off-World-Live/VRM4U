@@ -12,6 +12,7 @@
 #include "GameFramework/Actor.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
+#include "Animation/AnimNode_LinkedAnimGraph.h"
 #include "Animation/Skeleton.h"
 #include "AnimNode_VrmVMC.h"
 #include "VrmVMCFaceLiveLinkComponent.h"
@@ -33,23 +34,51 @@ namespace
 		return Finding;
 	}
 
-	// True when the (generated) anim class contains an FAnimNode_VrmVMC anywhere in its graph.
-	bool AnimClassContainsVmcNode(const UClass* AnimClass)
+	// True when the (generated) anim class contains an FAnimNode_VrmVMC anywhere in its graph,
+	// following Linked Anim Graph / Linked Anim Layer nodes into their separately-compiled
+	// instance classes (whose nodes are NOT in the outer class's GetAnimNodeProperties()).
+	bool AnimClassContainsVmcNode(const UClass* AnimClass, TSet<const UClass*>& Visited, int32 Depth)
 	{
 		const UAnimBlueprintGeneratedClass* Generated = Cast<UAnimBlueprintGeneratedClass>(AnimClass);
-		if (Generated == nullptr)
+		if (Generated == nullptr || Depth > 8)
 		{
 			return false;
 		}
+		bool bAlreadyVisited = false;
+		Visited.Add(Generated, &bAlreadyVisited);
+		if (bAlreadyVisited)
+		{
+			return false;
+		}
+		const UObject* CDO = Generated->GetDefaultObject();
 		for (const FStructProperty* Property : Generated->GetAnimNodeProperties())
 		{
-			if (Property != nullptr && Property->Struct != nullptr &&
-				Property->Struct->IsChildOf(FAnimNode_VrmVMC::StaticStruct()))
+			if (Property == nullptr || Property->Struct == nullptr)
+			{
+				continue;
+			}
+			if (Property->Struct->IsChildOf(FAnimNode_VrmVMC::StaticStruct()))
 			{
 				return true;
 			}
+			// FAnimNode_LinkedAnimLayer derives from FAnimNode_LinkedAnimGraph; both expose InstanceClass.
+			if (CDO != nullptr && Property->Struct->IsChildOf(FAnimNode_LinkedAnimGraph::StaticStruct()))
+			{
+				const FAnimNode_LinkedAnimGraph* Linked = Property->ContainerPtrToValuePtr<FAnimNode_LinkedAnimGraph>(CDO);
+				if (Linked != nullptr &&
+					AnimClassContainsVmcNode(Linked->InstanceClass.Get(), Visited, Depth + 1))
+				{
+					return true;
+				}
+			}
 		}
 		return false;
+	}
+
+	bool AnimClassContainsVmcNode(const UClass* AnimClass)
+	{
+		TSet<const UClass*> Visited;
+		return AnimClassContainsVmcNode(AnimClass, Visited, 0);
 	}
 
 	FTransform ComponentSpaceRefTransform(const FReferenceSkeleton& Ref, int32 BoneIndex)

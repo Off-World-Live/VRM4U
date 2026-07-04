@@ -71,6 +71,15 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::DAZ;
 	}
 
+	// Pre-Genesis-8 DAZ exports use generic naming (hip/abdomen/lShldr).
+	if (BoneNames.Contains(FName("hip")) &&
+		BoneNames.Contains(FName("abdomen")) &&
+		BoneNames.Contains(FName("lShldr")))
+	{
+		UE_LOG(LogTemp, Log, TEXT("Detected DAZ skeleton type (pre-Genesis 8 naming)"));
+		return ESkeletonType::DAZ;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("Could not detect skeleton type"));
 	return ESkeletonType::Unknown;
 }
@@ -746,6 +755,10 @@ bool UAutoPopulateVrmMeta::PopulateForMetaHuman(UVrmMetaObject* InMetaObject, US
 			{TEXT("rightLittleProximal"), TEXT("pinky_01_r"), false},
 			{TEXT("rightLittleIntermediate"), TEXT("pinky_02_r"), false},
 			{TEXT("rightLittleDistal"), TEXT("pinky_03_r"), false},
+
+			// Eyes - non-critical bones
+			{TEXT("leftEye"), TEXT("eye_l"), false},
+			{TEXT("rightEye"), TEXT("eye_r"), false},
 		};
 	}
 
@@ -924,6 +937,71 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 		else if (Entry.bIsCritical)
 		{
 			MissingCriticalBones.Add(Entry.HumanoidName + TEXT(" (") + Entry.DAZName + TEXT(")"));
+		}
+	}
+
+	// Second chance for bones the Genesis 8 map above missed: older/pre-G8 and underscore-style
+	// DAZ exports use different names (hip/abdomen/lShldr, l_upperarm, ...). Only fills bones
+	// still unmapped, so the Genesis 8 result above is never regressed.
+	if (TotalMapped < BoneMap.Num())
+	{
+		UE_LOG(LogTemp, Log, TEXT("DAZ mapping: trying older/alternative DAZ naming for unmapped bones"));
+
+		struct FAltNaming
+		{
+			FString HumanoidName;
+			TArray<FString> Candidates;
+		};
+
+		const TArray<FAltNaming> AlternativeNamings = {
+			{TEXT("hips"), {TEXT("hip")}},
+			{TEXT("spine"), {TEXT("abdomen")}},
+			{TEXT("chest"), {TEXT("chest"), TEXT("chest1")}},
+			{TEXT("neck"), {TEXT("neck")}},
+			{TEXT("leftShoulder"), {TEXT("lCollar"), TEXT("l_clavicle")}},
+			{TEXT("rightShoulder"), {TEXT("rCollar"), TEXT("r_clavicle")}},
+			{TEXT("leftUpperArm"), {TEXT("lShldr"), TEXT("l_upperarm")}},
+			{TEXT("rightUpperArm"), {TEXT("rShldr"), TEXT("r_upperarm")}},
+			{TEXT("leftLowerArm"), {TEXT("lForeArm"), TEXT("l_forearm")}},
+			{TEXT("rightLowerArm"), {TEXT("rForeArm"), TEXT("r_forearm")}},
+			{TEXT("leftUpperLeg"), {TEXT("lThigh"), TEXT("l_thigh")}},
+			{TEXT("rightUpperLeg"), {TEXT("rThigh"), TEXT("r_thigh")}},
+			{TEXT("leftLowerLeg"), {TEXT("lShin"), TEXT("l_calf")}},
+			{TEXT("rightLowerLeg"), {TEXT("rShin"), TEXT("r_calf")}},
+		};
+
+		for (const FAltNaming& Alt : AlternativeNamings)
+		{
+			if (InMetaObject->humanoidBoneTable.Contains(Alt.HumanoidName))
+			{
+				continue;
+			}
+			for (const FString& Candidate : Alt.Candidates)
+			{
+				if (!AvailableBones.Contains(*Candidate))
+				{
+					continue;
+				}
+				InMetaObject->humanoidBoneTable.Add(Alt.HumanoidName, Candidate);
+				TotalMapped++;
+
+				// Mirror the primary pass's critical-bone bookkeeping for this entry.
+				for (const FBoneMapEntry& Entry : BoneMap)
+				{
+					if (Entry.HumanoidName == Alt.HumanoidName)
+					{
+						if (Entry.bIsCritical)
+						{
+							MappedCritical++;
+							MissingCriticalBones.Remove(Entry.HumanoidName + TEXT(" (") + Entry.DAZName + TEXT(")"));
+						}
+						break;
+					}
+				}
+
+				UE_LOG(LogTemp, Log, TEXT("Applied alternative DAZ mapping: %s -> %s"), *Alt.HumanoidName, *Candidate);
+				break;
+			}
 		}
 	}
 

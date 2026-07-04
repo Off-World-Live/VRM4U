@@ -228,7 +228,10 @@ namespace
 						LOCTEXT("SetupEntryTooltip",
 							"Create/reuse the IK rigs and IK Retargeter (with an auto-aligned retarget pose) needed to drive this character from the live VMC-driven VRM rig, and set its Anim Class to VrmVMCRetargetAnimInstance."),
 						FSlateIcon(),
-						FUIAction(FExecuteAction::CreateLambda([Actor]() { RunSetupForActor(Actor); })));
+						FUIAction(FExecuteAction::CreateLambda([WeakActor = TWeakObjectPtr<AActor>(Actor)]()
+						{
+							if (AActor* A = WeakActor.Get()) { RunSetupForActor(A); }
+						})));
 				}
 				if (UVrmVMCFaceLiveLinkComponent::FindFaceMeshOnActor(Actor) != nullptr)
 				{
@@ -238,7 +241,10 @@ namespace
 						LOCTEXT("FaceSetupEntryTooltip",
 							"Drive this character's face from the VMC blendshape stream: assign the stock LiveLink face AnimBP (ABP_MH_LiveLink) to the face mesh and add the VRM4U component that publishes the VMC curves as an ARKit LiveLink subject at play time. Requires the engine's Live Link plugin."),
 						FSlateIcon(),
-						FUIAction(FExecuteAction::CreateLambda([Actor]() { RunFaceSetupForActor(Actor); })));
+						FUIAction(FExecuteAction::CreateLambda([WeakActor = TWeakObjectPtr<AActor>(Actor)]()
+						{
+							if (AActor* A = WeakActor.Get()) { RunFaceSetupForActor(A); }
+						})));
 				}
 			}));
 	}
