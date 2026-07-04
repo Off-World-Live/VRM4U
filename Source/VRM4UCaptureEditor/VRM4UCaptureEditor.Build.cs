@@ -25,6 +25,7 @@ public class VRM4UCaptureEditor : ModuleRules
 
 				"VRM4U",
 				"VRM4UCapture",
+				"OSC",
 				"EditorStyle",
 
 				// dependencies for the editor extension
@@ -39,7 +40,27 @@ public class VRM4UCaptureEditor : ModuleRules
 				"EditorFramework",
 				"ToolMenus",
 				"AppFramework",
+				"WorkspaceMenuStructure",
+				
+				"Json",
+				"JsonUtilities",
+
+				"LevelEditor",
+				"TypedElementFramework",
+				"TypedElementRuntime",
 			});
+
+		// Retarget setup wizard (VrmRetargetSetupUtil) drives the IK Rig / IK Retargeter
+		// controller API; UE5 only, same guard as the other VRM4U modules.
+		BuildVersion Version;
+		if (BuildVersion.TryRead(BuildVersion.GetDefaultFileName(), out Version))
+		{
+			if (Version.MajorVersion == 5)
+			{
+				PrivateDependencyModuleNames.Add("IKRig");
+				PrivateDependencyModuleNames.Add("IKRigEditor");
+			}
+		}
 
 		PrivateIncludePathModuleNames.AddRange(
 			new string[]
