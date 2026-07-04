@@ -166,4 +166,12 @@ private:
 	TSharedPtr<FCriticalSection> BoneStateLock;
 	TMap<FString, FOWLVMCPerBoneState> BoneStates;
 	TMap<FString, FOWLVMCPerCurveState> CurveStates;
+
+	// Worker-thread-only copies the eval reads for mask/override lookups. The
+	// eval refreshes them from the maps above only when bStateSnapshotDirty is
+	// set, which the Set*/Clear* mutators do under BoneStateLock — so the copy
+	// happens when overrides change, not every frame.
+	TMap<FString, FOWLVMCPerBoneState> BoneStatesSnapshotCached;
+	TMap<FString, FOWLVMCPerCurveState> CurveStatesSnapshotCached;
+	bool bStateSnapshotDirty = true;
 };

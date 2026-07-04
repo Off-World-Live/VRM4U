@@ -233,13 +233,19 @@ void FAnimNode_VrmVMC::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseCont
 
 TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 
-	// Snapshot per-curve state under lock. Mask, overrides, and the
-	// last-applied write below all consult this snapshot.
-	TMap<FString, FOWLVMCPerCurveState> CurveStatesSnapshot;
+	// Refresh the mask/override snapshot only when a Blueprint mutator changed
+	// it, rather than copying both state maps every eval. The cached copies are
+	// read on this worker thread only; the maps and dirty flag live under lock.
 	{
 		FScopeLock Lock(BoneStateLock.Get());
-		CurveStatesSnapshot = CurveStates;
+		if (bStateSnapshotDirty)
+		{
+			BoneStatesSnapshotCached = BoneStates;
+			CurveStatesSnapshotCached = CurveStates;
+			bStateSnapshotDirty = false;
+		}
 	}
+	const TMap<FString, FOWLVMCPerCurveState>& CurveStatesSnapshot = CurveStatesSnapshotCached;
 
 	struct FPendingCurveLastApplied
 	{
@@ -342,11 +348,7 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 				}
 			}
 			
-			TMap<FString, FOWLVMCPerBoneState> BoneStatesSnapshot;
-			{
-				FScopeLock Lock(BoneStateLock.Get());
-				BoneStatesSnapshot = BoneStates;
-			}
+			const TMap<FString, FOWLVMCPerBoneState>& BoneStatesSnapshot = BoneStatesSnapshotCached;
 
 			struct FPendingLastApplied
 			{
@@ -610,6 +612,7 @@ void FAnimNode_VrmVMC::SetPreRebaseRotation(const FString& HumanoidName, const F
 	FOWLVMCPerBoneState& State = BoneStates.FindOrAdd(HumanoidName);
 	State.PreRebaseRotation = Rotation;
 	State.bHasPreRebase = true;
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::ClearPreRebaseRotation(const FString& HumanoidName)
@@ -620,6 +623,7 @@ void FAnimNode_VrmVMC::ClearPreRebaseRotation(const FString& HumanoidName)
 		State->PreRebaseRotation = FQuat::Identity;
 		State->bHasPreRebase = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 bool FAnimNode_VrmVMC::TryGetPreRebaseRotation(const FString& HumanoidName, FQuat& OutRotation) const
@@ -658,6 +662,7 @@ void FAnimNode_VrmVMC::ClearAllPreRebaseOverrides()
 		Pair.Value.PreRebaseRotation = FQuat::Identity;
 		Pair.Value.bHasPreRebase = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::SetPostRebaseRotation(const FString& HumanoidName, const FQuat& Rotation)
@@ -666,6 +671,7 @@ void FAnimNode_VrmVMC::SetPostRebaseRotation(const FString& HumanoidName, const 
 	FOWLVMCPerBoneState& State = BoneStates.FindOrAdd(HumanoidName);
 	State.PostRebaseRotation = Rotation;
 	State.bHasPostRebase = true;
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::ClearPostRebaseRotation(const FString& HumanoidName)
@@ -676,6 +682,7 @@ void FAnimNode_VrmVMC::ClearPostRebaseRotation(const FString& HumanoidName)
 		State->PostRebaseRotation = FQuat::Identity;
 		State->bHasPostRebase = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::ClearAllPostRebaseOverrides()
@@ -686,6 +693,7 @@ void FAnimNode_VrmVMC::ClearAllPostRebaseOverrides()
 		Pair.Value.PostRebaseRotation = FQuat::Identity;
 		Pair.Value.bHasPostRebase = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::SetBoneMasked(const FString& HumanoidName, bool bMasked)
@@ -693,6 +701,7 @@ void FAnimNode_VrmVMC::SetBoneMasked(const FString& HumanoidName, bool bMasked)
 	FScopeLock Lock(BoneStateLock.Get());
 	FOWLVMCPerBoneState& State = BoneStates.FindOrAdd(HumanoidName);
 	State.bMasked = bMasked;
+	bStateSnapshotDirty = true;
 }
 
 bool FAnimNode_VrmVMC::IsBoneMasked(const FString& HumanoidName) const
@@ -712,6 +721,7 @@ void FAnimNode_VrmVMC::ClearAllMasks()
 	{
 		Pair.Value.bMasked = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 bool FAnimNode_VrmVMC::IsPreRebaseOverridden(const FString& HumanoidName) const
@@ -745,6 +755,7 @@ void FAnimNode_VrmVMC::ClearBoneState(const FString& HumanoidName)
 		State->bHasPostRebase = false;
 		State->bMasked = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 bool FAnimNode_VrmVMC::TryGetLastAppliedCurveValue(const FString& CurveName, float& OutValue) const
@@ -767,6 +778,7 @@ void FAnimNode_VrmVMC::SetCurveOverride(const FString& CurveName, float Value)
 	FOWLVMCPerCurveState& State = CurveStates.FindOrAdd(CurveName);
 	State.OverrideValue = Value;
 	State.bHasOverride = true;
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::ClearCurveOverride(const FString& CurveName)
@@ -777,6 +789,7 @@ void FAnimNode_VrmVMC::ClearCurveOverride(const FString& CurveName)
 		State->OverrideValue = 0.0f;
 		State->bHasOverride = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::ClearAllCurveOverrides()
@@ -787,6 +800,7 @@ void FAnimNode_VrmVMC::ClearAllCurveOverrides()
 		Pair.Value.OverrideValue = 0.0f;
 		Pair.Value.bHasOverride = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 void FAnimNode_VrmVMC::SetCurveMasked(const FString& CurveName, bool bMasked)
@@ -794,6 +808,7 @@ void FAnimNode_VrmVMC::SetCurveMasked(const FString& CurveName, bool bMasked)
 	FScopeLock Lock(BoneStateLock.Get());
 	FOWLVMCPerCurveState& State = CurveStates.FindOrAdd(CurveName);
 	State.bMasked = bMasked;
+	bStateSnapshotDirty = true;
 }
 
 bool FAnimNode_VrmVMC::IsCurveMasked(const FString& CurveName) const
@@ -813,6 +828,7 @@ void FAnimNode_VrmVMC::ClearAllCurveMasks()
 	{
 		Pair.Value.bMasked = false;
 	}
+	bStateSnapshotDirty = true;
 }
 
 bool FAnimNode_VrmVMC::IsCurveOverridden(const FString& CurveName) const
