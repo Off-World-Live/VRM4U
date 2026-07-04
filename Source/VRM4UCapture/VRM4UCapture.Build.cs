@@ -18,6 +18,12 @@ public class VRM4UCapture : ModuleRules
 				"OSC",
 				"AnimGraphRuntime",
 
+				// Engine-core Runtime module (NOT the LiveLink plugin): types + the
+				// modular-feature handle for the VMC->LiveLink face bridge. The actual
+				// client is resolved at runtime and its absence is handled gracefully,
+				// so projects without the LiveLink plugin lose only the face bridge.
+				"LiveLinkInterface",
+
 				"VRM4U",
             });
 
