@@ -9,8 +9,6 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/SBoxPanel.h"
-#include "Framework/Notifications/NotificationManager.h"
-#include "Widgets/Notifications/SNotificationList.h"
 #include "PropertyCustomizationHelpers.h"
 
 #define LOCTEXT_NAMESPACE "VrmMetaObjectCustomization"
@@ -36,7 +34,10 @@ void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
     {
         return;
     }
-    
+
+    // Cache so OnAutoPopulateClicked can force a refresh after mutating the asset.
+    CachedDetailBuilder = &DetailBuilder;
+
     // Get category for rendering
     IDetailCategoryBuilder& RenderingCategory = DetailBuilder.EditCategory("Rendering", FText::GetEmpty(), ECategoryPriority::Important);
     
@@ -75,7 +76,8 @@ void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
             .ContentPadding(FMargin(5.0f, 2.0f))
             .Text(LOCTEXT("AutoPopulateButton", "Auto-Populate"))
             .ToolTipText(LOCTEXT("AutoPopulateButtonTooltip", "Automatically populate bone mappings based on the selected or detected skeleton type"))
-            .OnClicked(FOnClicked::CreateRaw(this, &FVrmMetaObjectCustomization::OnAutoPopulateClicked, MetaObject))
+            .OnClicked(FOnClicked::CreateSP(this, &FVrmMetaObjectCustomization::OnAutoPopulateClicked,
+                                            TWeakObjectPtr<UVrmMetaObject>(MetaObject)))
         ];
     
     // Ensure the humanoidBoneTable property appears after our auto-populate button
@@ -83,112 +85,19 @@ void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
     RenderingCategory.AddProperty(HumanoidBoneTableProperty);
 }
 
-FReply FVrmMetaObjectCustomization::OnAutoPopulateClicked(UVrmMetaObject* MetaObject)
+FReply FVrmMetaObjectCustomization::OnAutoPopulateClicked(TWeakObjectPtr<UVrmMetaObject> MetaObjectWeak)
 {
-    if (!MetaObject || !MetaObject->SkeletalMesh)
+    // Validation, type resolution, transaction, and notifications are shared
+    // across all Auto-Populate entry points.
+    const FVrmAutoPopulateUiResult Result =
+        UAutoPopulateVrmMeta::AutoPopulateWithUi(MetaObjectWeak.Get(), /*bShowAssignReminder=*/true);
+
+    if (Result.bSuccess && CachedDetailBuilder != nullptr)
     {
-        // Show error notification
-        FNotificationInfo Info(LOCTEXT("NoSkeletalMesh", "Error: VrmMetaObject has no SkeletalMesh assigned"));
-        Info.bUseLargeFont = false;
-        Info.ExpireDuration = 5.0f;
-        FSlateNotificationManager::Get().AddNotification(Info);
-        return FReply::Handled();
+        // Refresh just this details panel so the new bone table rows appear.
+        CachedDetailBuilder->ForceRefreshDetails();
     }
-    
-    // Determine skeleton type (either from user selection or auto-detection)
-    ESkeletonType DetectedType = ESkeletonType::Unknown;
-    FString TypeName;
-    
-    if (MetaObject->SkeletonType == EVrmSkeletonType::Auto)
-    {
-        // Auto detect
-        DetectedType = UAutoPopulateVrmMeta::DetectSkeletonType(MetaObject->SkeletalMesh);
-        
-        if (DetectedType == ESkeletonType::Unknown)
-        {
-            // Show error notification
-            FNotificationInfo Info(LOCTEXT("UnknownSkeleton", "Error: Could not auto-detect skeleton type"));
-            Info.bUseLargeFont = false;
-            Info.ExpireDuration = 5.0f;
-            FSlateNotificationManager::Get().AddNotification(Info);
-            return FReply::Handled();
-        }
-        
-        // Set type name based on detected type
-        switch (DetectedType)
-        {
-        case ESkeletonType::Mixamo: TypeName = "Mixamo"; break;
-        case ESkeletonType::MetaHuman: TypeName = "MetaHuman"; break;
-        case ESkeletonType::DAZ: TypeName = "DAZ"; break;
-        case ESkeletonType::VRM: TypeName = "VRM"; break;
-        default: TypeName = "Unknown"; break;
-        }
-    }
-    else
-    {
-        // User explicitly selected a type
-        switch (MetaObject->SkeletonType)
-        {
-        case EVrmSkeletonType::VRM:
-            TypeName = "VRM";
-            break;
-        case EVrmSkeletonType::Mixamo:
-            TypeName = "Mixamo";
-            break;
-        case EVrmSkeletonType::MetaHuman:
-            TypeName = "MetaHuman";
-            break;
-        case EVrmSkeletonType::DAZ:
-            TypeName = "DAZ";
-            break;
-        default:
-            TypeName = "Unknown";
-            break;
-        }
-    }
-    
-    bool bSuccess = UAutoPopulateVrmMeta::AutoPopulateMetaObject(MetaObject, MetaObject->SkeletalMesh);
-    
-    if (bSuccess)
-    {
-        // Show success notification with appropriate message
-        FText SuccessMessage;
-        if (MetaObject->SkeletonType == EVrmSkeletonType::Auto)
-        {
-            SuccessMessage = FText::Format(
-                LOCTEXT("SuccessfullyPopulatedAutoDetect", "Successfully populated bone mappings for auto-detected {0} skeleton"),
-                FText::FromString(TypeName)
-            );
-        }
-        else
-        {
-            SuccessMessage = FText::Format(
-                LOCTEXT("SuccessfullyPopulatedSelected", "Successfully populated bone mappings for {0} skeleton"),
-                FText::FromString(TypeName)
-            );
-        }
-        
-        FNotificationInfo Info(SuccessMessage);
-        Info.bUseLargeFont = false;
-        Info.ExpireDuration = 5.0f;
-        FSlateNotificationManager::Get().AddNotification(Info);
-        
-        // Mark the object as dirty so it can be saved
-        MetaObject->Modify();
-        
-        // Force a refresh of the details panel
-        FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-        PropertyEditorModule.NotifyCustomizationModuleChanged();
-    }
-    else
-    {
-        // Show error notification
-        FNotificationInfo Info(LOCTEXT("FailedToPopulate", "Error: Failed to populate bone mappings"));
-        Info.bUseLargeFont = false;
-        Info.ExpireDuration = 5.0f;
-        FSlateNotificationManager::Get().AddNotification(Info);
-    }
-    
+
     return FReply::Handled();
 }
 

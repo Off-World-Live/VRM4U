@@ -38,16 +38,20 @@ void UAnimGraphNode_VrmVMC::ValidateAnimNodePostCompile(FCompilerResultsLog& Mes
 	}
 	else
 	{
-		if (Node.VrmMetaObject->SkeletalMesh)
+		// GetTargetSkeleton() can be null for a freshly created / duplicated /
+		// reimporting AnimBP; dereferencing it unconditionally crashes the editor
+		// at compile. Cache and guard.
+		USkeleton* TargetSkeleton = CompiledClass ? CompiledClass->GetTargetSkeleton() : nullptr;
+		if (Node.VrmMetaObject->SkeletalMesh && TargetSkeleton)
 		{
-			if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != CompiledClass->GetTargetSkeleton())
+			if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != TargetSkeleton)
 			{
 				MessageLog.Warning(
 					*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(),
 					this);
 			}
 		}
-		if (CompiledClass->GetTargetSkeleton()->GetReferenceSkeleton().GetRawBoneNum() <= 0)
+		if (TargetSkeleton && TargetSkeleton->GetReferenceSkeleton().GetRawBoneNum() <= 0)
 		{
 			MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - Skeleton bad data").ToString(), this);
 		}
@@ -63,7 +67,12 @@ void UAnimGraphNode_VrmVMC::ValidateAnimNodeDuringCompilation(USkeleton* ForSkel
 	{
 		if (Node.VrmMetaObject == nullptr)
 		{
-			//MessageLog.Warning(*LOCTEXT("VrmNoMetaObject", "@@ - You must set VrmMetaObject").ToString(), this);
+			// Auto-search only resolves a humanoid table for VRM-imported meshes
+			// (via the asset list). For MetaHuman / DAZ / Mixamo nothing is found,
+			// so the node silently drives no bones. Nudge the user at compile time.
+			MessageLog.Note(*LOCTEXT("VrmNoMetaObject",
+				"@@ - No Vrm Meta Object set. Auto-search only resolves VRM-imported meshes; for "
+				"MetaHuman / DAZ / Mixamo, run Auto-Populate on a Vrm Meta Object and assign it here.").ToString(), this);
 		}
 		else
 		{
@@ -183,53 +192,15 @@ void UAnimGraphNode_VrmVMC::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	{
 		if (Node.VrmMetaObject && Node.VrmMetaObject->SkeletalMesh)
 		{
-			// Try to automatically populate metadata if needed
+			// Try to automatically populate metadata if needed. Validation, type
+			// resolution, the undo transaction, and notifications are shared across
+			// all Auto-Populate entry points. No assign reminder here: the meta is
+			// being assigned to the node right now.
 			if (Node.VrmMetaObject->humanoidBoneTable.Num() == 0)
 			{
 				// We need a non-const pointer to modify the meta object
 				UVrmMetaObject* MutableMetaObject = const_cast<UVrmMetaObject*>(Node.VrmMetaObject);
-
-				if (MutableMetaObject)
-				{
-					bool bSuccess = UAutoPopulateVrmMeta::AutoPopulateMetaObject(
-						MutableMetaObject, MutableMetaObject->SkeletalMesh);
-
-					// Create notification about the auto-population result
-					ESkeletonType DetectedType = UAutoPopulateVrmMeta::DetectSkeletonType(
-						MutableMetaObject->SkeletalMesh);
-					FString TypeName;
-					switch (DetectedType)
-					{
-					case ESkeletonType::VRM: TypeName = TEXT("VRM");
-						break;
-					case ESkeletonType::Mixamo: TypeName = TEXT("Mixamo");
-						break;
-					case ESkeletonType::MetaHuman: TypeName = TEXT("MetaHuman");
-						break;
-					case ESkeletonType::DAZ: TypeName = TEXT("DAZ");
-						break;
-					default: TypeName = TEXT("Unknown");
-					}
-
-					int32 MappedBoneCount = Node.VrmMetaObject->humanoidBoneTable.Num();
-					FString Message;
-					if (bSuccess)
-					{
-						Message = FString::Printf(TEXT("VRM4U: Successfully detected %s skeleton and mapped %d bones."),
-												*TypeName, MappedBoneCount);
-					}
-					else
-					{
-						Message = FString::Printf(
-							TEXT(
-								"VRM4U: Detected %s skeleton but could not map all required bones. Check log for details."),
-							*TypeName);
-					}
-
-					FNotificationInfo Info(FText::FromString(Message));
-					Info.ExpireDuration = 5.0f;
-					FSlateNotificationManager::Get().AddNotification(Info);
-				}
+				UAutoPopulateVrmMeta::AutoPopulateWithUi(MutableMetaObject, /*bShowAssignReminder=*/false);
 			}
 		}
 	}

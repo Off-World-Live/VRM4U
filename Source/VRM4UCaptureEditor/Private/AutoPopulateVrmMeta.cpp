@@ -3,6 +3,9 @@
 #include "Misc/EngineVersionComparison.h"
 #include "VrmMetaObject.h"
 #include "VrmUtil.h"
+#include "ScopedTransaction.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 
 ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletalMesh)
 {
@@ -65,12 +68,12 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::Mixamo;
 	}
 
-	// Check for DAZ specific bones
-	if (BoneNames.Contains(FName("hip")) &&
-		BoneNames.Contains(FName("abdomen")) &&
-		BoneNames.Contains(FName("lShldr")))
+	// Check for DAZ Genesis 8 specific bones
+	if (BoneNames.Contains(FName("pelvis")) &&
+		BoneNames.Contains(FName("abdomenLower")) &&
+		BoneNames.Contains(FName("lShldrBend")))
 	{
-		UE_LOG(LogTemp, Log, TEXT("Detected DAZ skeleton type"));
+		UE_LOG(LogTemp, Log, TEXT("Detected DAZ Genesis 8 skeleton type"));
 		return ESkeletonType::DAZ;
 	}
 
@@ -762,10 +765,6 @@ bool UAutoPopulateVrmMeta::PopulateForMetaHuman(UVrmMetaObject* InMetaObject, US
 			{TEXT("rightLittleProximal"), TEXT("pinky_01_r"), false},
 			{TEXT("rightLittleIntermediate"), TEXT("pinky_02_r"), false},
 			{TEXT("rightLittleDistal"), TEXT("pinky_03_r"), false},
-
-			// Check for MetaHuman eye bones with different naming conventions
-			{TEXT("leftEye"), TEXT("eye_l"), false},
-			{TEXT("rightEye"), TEXT("eye_r"), false},
 		};
 	}
 
@@ -850,33 +849,33 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 	};
 
 	TArray<FBoneMapEntry> BoneMap = {
-		// Main body - critical bones
-		{TEXT("hips"), TEXT("hip"), true},
-		{TEXT("spine"), TEXT("abdomen"), true},
-		{TEXT("chest"), TEXT("chest"), true},
-		{TEXT("neck"), TEXT("neck"), true},
+		// Main body - critical bones (DAZ Genesis 8)
+		{TEXT("hips"), TEXT("pelvis"), true},
+		{TEXT("spine"), TEXT("abdomenLower"), true},
+		{TEXT("chest"), TEXT("chestUpper"), true},
+		{TEXT("neck"), TEXT("neckLower"), true},
 		{TEXT("head"), TEXT("head"), true},
 
 		// Left arm - critical bones
 		{TEXT("leftShoulder"), TEXT("lCollar"), true},
-		{TEXT("leftUpperArm"), TEXT("lShldr"), true},
-		{TEXT("leftLowerArm"), TEXT("lForeArm"), true},
+		{TEXT("leftUpperArm"), TEXT("lShldrBend"), true},
+		{TEXT("leftLowerArm"), TEXT("lForearmBend"), true},
 		{TEXT("leftHand"), TEXT("lHand"), true},
 
 		// Right arm - critical bones
 		{TEXT("rightShoulder"), TEXT("rCollar"), true},
-		{TEXT("rightUpperArm"), TEXT("rShldr"), true},
-		{TEXT("rightLowerArm"), TEXT("rForeArm"), true},
+		{TEXT("rightUpperArm"), TEXT("rShldrBend"), true},
+		{TEXT("rightLowerArm"), TEXT("rForearmBend"), true},
 		{TEXT("rightHand"), TEXT("rHand"), true},
 
 		// Left leg - critical bones
-		{TEXT("leftUpperLeg"), TEXT("lThigh"), true},
+		{TEXT("leftUpperLeg"), TEXT("lThighBend"), true},
 		{TEXT("leftLowerLeg"), TEXT("lShin"), true},
 		{TEXT("leftFoot"), TEXT("lFoot"), true},
 		{TEXT("leftToes"), TEXT("lToe"), false},
 
 		// Right leg - critical bones
-		{TEXT("rightUpperLeg"), TEXT("rThigh"), true},
+		{TEXT("rightUpperLeg"), TEXT("rThighBend"), true},
 		{TEXT("rightLowerLeg"), TEXT("rShin"), true},
 		{TEXT("rightFoot"), TEXT("rFoot"), true},
 		{TEXT("rightToes"), TEXT("rToe"), false},
@@ -947,65 +946,6 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 		else if (Entry.bIsCritical)
 		{
 			MissingCriticalBones.Add(Entry.HumanoidName + TEXT(" (") + Entry.DAZName + TEXT(")"));
-		}
-	}
-
-	// Check for alternative bone naming that some DAZ exports might use
-	if (TotalMapped < TotalCritical / 2)
-	{
-		UE_LOG(LogTemp, Log, TEXT("DAZ mapping: Standard DAZ naming convention failed, trying alternative naming"));
-		
-		// Define alternative naming mappings for DAZ exports that might use different conventions
-		TArray<TPair<FString, FString>> AlternativeNamings = {
-			// Alternative naming for main body
-			{TEXT("hip"), TEXT("pelvis")},
-			{TEXT("abdomen"), TEXT("spine")},
-			{TEXT("chest"), TEXT("chest1")},
-			
-			// Alternative naming for arms
-			{TEXT("lCollar"), TEXT("l_clavicle")},
-			{TEXT("rCollar"), TEXT("r_clavicle")},
-			{TEXT("lShldr"), TEXT("l_upperarm")},
-			{TEXT("rShldr"), TEXT("r_upperarm")},
-			{TEXT("lForeArm"), TEXT("l_forearm")},
-			{TEXT("rForeArm"), TEXT("r_forearm")},
-			
-			// Alternative naming for legs
-			{TEXT("lThigh"), TEXT("l_thigh")},
-			{TEXT("rThigh"), TEXT("r_thigh")},
-			{TEXT("lShin"), TEXT("l_calf")},
-			{TEXT("rShin"), TEXT("r_calf")},
-		};
-		
-		// Try each alternative naming
-		for (const TPair<FString, FString>& Alternative : AlternativeNamings)
-		{
-			for (const FBoneMapEntry& Entry : BoneMap)
-			{
-				// Skip if already mapped
-				if (InMetaObject->humanoidBoneTable.Contains(Entry.HumanoidName))
-				{
-					continue;
-				}
-				
-				// Check if this entry matches the current alternative
-				if (Entry.DAZName == Alternative.Key && AvailableBones.Contains(*Alternative.Value))
-				{
-					InMetaObject->humanoidBoneTable.Add(Entry.HumanoidName, Alternative.Value);
-					TotalMapped++;
-					
-					if (Entry.bIsCritical)
-					{
-						// Update tracking for critical bones
-						MappedCritical++;
-						// Remove from missing list if it was there
-						MissingCriticalBones.Remove(Entry.HumanoidName + TEXT(" (") + Entry.DAZName + TEXT(")"));
-					}
-					
-					UE_LOG(LogTemp, Log, TEXT("Applied alternative DAZ mapping: %s -> %s (instead of %s)"), 
-						*Entry.HumanoidName, *Alternative.Value, *Entry.DAZName);
-				}
-			}
 		}
 	}
 
@@ -1080,4 +1020,113 @@ bool UAutoPopulateVrmMeta::ApplyCustomBoneOverrides(UVrmMetaObject* InMetaObject
 
 	UE_LOG(LogTemp, Log, TEXT("Applied %d custom bone overrides"), OverridesApplied);
 	return OverridesApplied > 0;
+}
+
+namespace
+{
+	void ShowAutoPopulateToast(const FText& Message, bool bSuccess, float ExpireSeconds)
+	{
+		FNotificationInfo Info(Message);
+		Info.bUseLargeFont = false;
+		Info.bUseSuccessFailIcons = true;
+		Info.ExpireDuration = ExpireSeconds;
+		if (TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info))
+		{
+			Item->SetCompletionState(bSuccess ? SNotificationItem::CS_Success : SNotificationItem::CS_Fail);
+		}
+	}
+}
+
+FVrmAutoPopulateUiResult UAutoPopulateVrmMeta::AutoPopulateWithUi(UVrmMetaObject* MetaObject, bool bShowAssignReminder)
+{
+	FVrmAutoPopulateUiResult Result;
+
+	if (MetaObject == nullptr || MetaObject->SkeletalMesh == nullptr)
+	{
+		ShowAutoPopulateToast(
+			NSLOCTEXT("AutoPopulateVrmMeta", "NoSkeletalMesh", "Auto-Populate: the Vrm Meta Object has no SkeletalMesh assigned."),
+			false, 5.0f);
+		return Result;
+	}
+
+	// Resolve the display type name: an explicit SkeletonType on the meta wins;
+	// Auto falls back to detection (and fails loudly on Unknown - the populate
+	// itself would also fail, but this names the actual problem).
+	bool bAutoDetected = false;
+	switch (MetaObject->SkeletonType)
+	{
+	case EVrmSkeletonType::VRM:       Result.TypeName = TEXT("VRM"); break;
+	case EVrmSkeletonType::Mixamo:    Result.TypeName = TEXT("Mixamo"); break;
+	case EVrmSkeletonType::MetaHuman: Result.TypeName = TEXT("MetaHuman"); break;
+	case EVrmSkeletonType::DAZ:       Result.TypeName = TEXT("DAZ"); break;
+	case EVrmSkeletonType::Auto:
+	default:
+	{
+		bAutoDetected = true;
+		switch (DetectSkeletonType(MetaObject->SkeletalMesh))
+		{
+		case ESkeletonType::VRM:       Result.TypeName = TEXT("VRM"); break;
+		case ESkeletonType::Mixamo:    Result.TypeName = TEXT("Mixamo"); break;
+		case ESkeletonType::MetaHuman: Result.TypeName = TEXT("MetaHuman"); break;
+		case ESkeletonType::DAZ:       Result.TypeName = TEXT("DAZ"); break;
+		default:
+			ShowAutoPopulateToast(
+				NSLOCTEXT("AutoPopulateVrmMeta", "UnknownSkeleton",
+					"Auto-Populate: could not detect the skeleton type. Set SkeletonType explicitly on the Vrm Meta Object."),
+				false, 5.0f);
+			return Result;
+		}
+		break;
+	}
+	}
+
+	// Auto-populate edits an asset, so wrap the mutation in a transaction
+	// (Modify() before) and flush change/dirty state after, otherwise the edit
+	// is neither undoable nor saved.
+	const FScopedTransaction Transaction(
+		NSLOCTEXT("AutoPopulateVrmMeta", "AutoPopulateCtx", "Auto-Populate VRM Bone Mappings"));
+	MetaObject->Modify();
+
+	Result.bSuccess = AutoPopulateMetaObject(MetaObject, MetaObject->SkeletalMesh);
+
+	MetaObject->PostEditChange();
+	MetaObject->MarkPackageDirty();
+
+	Result.MappedBones = MetaObject->humanoidBoneTable.Num();
+
+	if (Result.bSuccess)
+	{
+		FText Message = FText::Format(
+			bAutoDetected
+				? NSLOCTEXT("AutoPopulateVrmMeta", "PopulateOkAuto", "Auto-Populate: mapped {0} bones for the auto-detected {1} skeleton.")
+				: NSLOCTEXT("AutoPopulateVrmMeta", "PopulateOkExplicit", "Auto-Populate: mapped {0} bones for the {1} skeleton."),
+			Result.MappedBones, FText::FromString(Result.TypeName));
+		if (bShowAssignReminder)
+		{
+			// The easy-to-miss next step: a populated asset does nothing until it
+			// is assigned to the VRM VMC node (auto-search finds VRM meshes only).
+			Message = FText::Format(
+				NSLOCTEXT("AutoPopulateVrmMeta", "PopulateAssignReminder",
+					"{0}\nNext: assign this asset to your VRM VMC node's 'Vrm Meta Object' (auto-search finds VRM meshes only), then restart PIE."),
+				Message);
+		}
+		else
+		{
+			Message = FText::Format(
+				NSLOCTEXT("AutoPopulateVrmMeta", "PopulateRestartReminder", "{0}\nRestart PIE to apply."),
+				Message);
+		}
+		ShowAutoPopulateToast(Message, true, 8.0f);
+	}
+	else
+	{
+		ShowAutoPopulateToast(
+			FText::Format(
+				NSLOCTEXT("AutoPopulateVrmMeta", "PopulateFail",
+					"Auto-Populate: failed to map the {0} skeleton's bones. See the Output Log for details."),
+				FText::FromString(Result.TypeName)),
+			false, 5.0f);
+	}
+
+	return Result;
 }

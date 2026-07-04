@@ -8,6 +8,8 @@
 #include "PropertyEditorModule.h"
 #include "VrmMetaObject.h"
 #include "VrmMetaObjectCustomization.h"
+#include "VrmVMCDebugTabSpawner.h"
+#include "VrmRetargetSetupMenuExtension.h"
 
 #define LOCTEXT_NAMESPACE "VRM4UCapture"
 
@@ -15,24 +17,32 @@ DEFINE_LOG_CATEGORY(LogVRM4UCaptureEditor);
 
 void FVRM4UCaptureEditorModule::StartupModule()
 {
-	// Register detail customization
+	UE_LOG(LogVRM4UCaptureEditor, Warning, TEXT("[VRM4UCaptureEditor] StartupModule ENTERED"));
+
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName(), 
-		FOnGetDetailCustomizationInstance::CreateStatic(&FVrmMetaObjectCustomization::MakeInstance));
-    
-	// Notify that the module has been loaded
+	PropertyModule.RegisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName(),
+	                                         FOnGetDetailCustomizationInstance::CreateStatic(
+		                                         &FVrmMetaObjectCustomization::MakeInstance));
+
+	FVrmVMCDebugTabSpawner::Register();
+	FVrmRetargetSetupMenuExtension::Register();
+
 	UE_LOG(LogVRM4UCaptureEditor, Log, TEXT("VRM4UCaptureEditor module has started"));
 }
 
 void FVRM4UCaptureEditorModule::ShutdownModule()
 {
+	FVrmRetargetSetupMenuExtension::Unregister();
+	FVrmVMCDebugTabSpawner::Unregister();
+
 	// Unregister detail customization
 	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
-		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(
+			"PropertyEditor");
 		PropertyModule.UnregisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName());
 	}
-    
+
 	// Notify that the module has been unloaded
 	UE_LOG(LogVRM4UCaptureEditor, Log, TEXT("VRM4UCaptureEditor module has been shut down"));
 }
