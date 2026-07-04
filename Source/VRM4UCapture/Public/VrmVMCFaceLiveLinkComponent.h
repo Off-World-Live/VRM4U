@@ -7,6 +7,7 @@
 #include "VrmVMCFaceLiveLinkComponent.generated.h"
 
 class USkeletalMeshComponent;
+class UAnimInstance;
 
 /**
  * Level wiring for the VMC -> LiveLink ARKit face bridge. Add to a MetaHuman (or any
@@ -87,6 +88,14 @@ public:
 private:
 	// Returns true when binding is finished (bound, or determined impossible).
 	bool TryBindFaceSubject();
+
+	// Default SubjectName value; a component still carrying this in BeginPlay gets a
+	// per-actor-unique name so two default-configured actors don't share one subject.
+	static const FName DefaultSubjectName;
+
+	// Anim instance the subject was last bound into; used to detect a runtime
+	// anim-instance swap (SetAnimInstanceClass / mesh swap) and re-arm the bind.
+	TWeakObjectPtr<UAnimInstance> BoundAnimInstance;
 
 	double BindDeadlineSeconds = 0.0;
 	bool bBindPending = false;

@@ -52,6 +52,8 @@ namespace
 	}
 }
 
+const FName UVrmVMCFaceLiveLinkComponent::DefaultSubjectName(TEXT("VMCFace"));
+
 UVrmVMCFaceLiveLinkComponent::UVrmVMCFaceLiveLinkComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -141,15 +143,37 @@ void UVrmVMCFaceLiveLinkComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Give a default-configured component a per-actor-unique subject so two default
+	// actors (e.g. two MetaHumans) don't collide on one FaceLiveLinkSources entry.
+	if (SubjectName.IsNone() || SubjectName == DefaultSubjectName)
+	{
+		const AActor* Owner = GetOwner();
+		const FString Base = Owner ? Owner->GetName() : GetName();
+		SubjectName = FName(*(Base + TEXT("_VMCFace")));
+	}
+
 	if (bAutoStart)
 	{
 		StartBridge();
 	}
-	if (bBindFaceAnimInstanceSubject && !TryBindFaceSubject())
+	if (bBindFaceAnimInstanceSubject)
 	{
-		bBindPending = true;
-		BindDeadlineSeconds = FPlatformTime::Seconds() + BindRetryWindowSeconds;
-		SetComponentTickEnabled(true);
+		if (TryBindFaceSubject())
+		{
+			// Bound (or determined impossible) immediately. If it really bound, keep a
+			// cheap 1s watch so a later anim-instance swap re-arms the bind.
+			if (BoundAnimInstance.IsValid())
+			{
+				SetComponentTickInterval(1.0f);
+				SetComponentTickEnabled(true);
+			}
+		}
+		else
+		{
+			bBindPending = true;
+			BindDeadlineSeconds = FPlatformTime::Seconds() + BindRetryWindowSeconds;
+			SetComponentTickEnabled(true);
+		}
 	}
 }
 
@@ -162,23 +186,45 @@ void UVrmVMCFaceLiveLinkComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 void UVrmVMCFaceLiveLinkComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (!bBindPending)
+	if (!bBindFaceAnimInstanceSubject)
 	{
 		SetComponentTickEnabled(false);
 		return;
 	}
-	if (TryBindFaceSubject())
+
+	if (bBindPending)
 	{
-		bBindPending = false;
-		SetComponentTickEnabled(false);
+		// Initial bounded-retry phase (fast tick).
+		if (TryBindFaceSubject())
+		{
+			bBindPending = false;
+			if (BoundAnimInstance.IsValid())
+			{
+				SetComponentTickInterval(1.0f); // switch to the cheap swap watch
+			}
+			else
+			{
+				SetComponentTickEnabled(false); // impossible to bind: stop
+			}
+		}
+		else if (FPlatformTime::Seconds() > BindDeadlineSeconds)
+		{
+			UE_LOG(LogVRM4UCapture, Warning,
+				TEXT("[FaceLiveLink] '%s': no face anim instance appeared to bind subject '%s' to. Set the face mesh's Anim Class (e.g. ABP_MH_LiveLink) or point its LiveLink subject at '%s' manually."),
+				*GetPathName(), *SubjectName.ToString(), *SubjectName.ToString());
+			bBindPending = false;
+			SetComponentTickEnabled(false);
+		}
+		return;
 	}
-	else if (FPlatformTime::Seconds() > BindDeadlineSeconds)
+
+	// Periodic (1s) watch: re-arm the bind after a runtime anim-instance swap
+	// (SetAnimInstanceClass / mesh swap) so the face doesn't freeze.
+	USkeletalMeshComponent* FaceComponent = FindFaceMeshComponent();
+	UAnimInstance* Current = FaceComponent ? FaceComponent->GetAnimInstance() : nullptr;
+	if (Current != nullptr && Current != BoundAnimInstance.Get())
 	{
-		UE_LOG(LogVRM4UCapture, Warning,
-			TEXT("[FaceLiveLink] '%s': no face anim instance appeared to bind subject '%s' to. Set the face mesh's Anim Class (e.g. ABP_MH_LiveLink) or point its LiveLink subject at '%s' manually."),
-			*GetPathName(), *SubjectName.ToString(), *SubjectName.ToString());
-		bBindPending = false;
-		SetComponentTickEnabled(false);
+		TryBindFaceSubject();
 	}
 }
 
@@ -207,6 +253,7 @@ bool UVrmVMCFaceLiveLinkComponent::TryBindFaceSubject()
 	}
 	FLiveLinkSubjectName* Value = SubjectProperty->ContainerPtrToValuePtr<FLiveLinkSubjectName>(AnimInstance);
 	Value->Name = SubjectName;
+	BoundAnimInstance = AnimInstance;
 	UE_LOG(LogVRM4UCapture, Display,
 		TEXT("[FaceLiveLink] '%s': bound LiveLink subject '%s' to '%s.%s'."),
 		*GetPathName(), *SubjectName.ToString(), *AnimInstance->GetClass()->GetName(), *SubjectProperty->GetName());

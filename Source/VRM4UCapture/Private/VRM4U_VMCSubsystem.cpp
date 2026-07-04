@@ -280,13 +280,19 @@ UVrmVMCObject* UVRM4U_VMCSubsystem::FindOrAddServer(const FString ServerAddress,
 
 	const FString AddrCopy = ServerAddress;
 	const int PortCopy = port;
-	AsyncTask(ENamedThreads::GameThread, [this, AddrCopy, PortCopy]()
+	TWeakObjectPtr<UVRM4U_VMCSubsystem> WeakThis(this);
+	AsyncTask(ENamedThreads::GameThread, [WeakThis, AddrCopy, PortCopy]()
 	{
-		FScopeLock Lock(&VMCObjectListLock);
-		PendingServerKeys.Remove(FString::Printf(TEXT("%s:%d"), *AddrCopy, PortCopy));
-		if (FindServer_NoLock(AddrCopy, PortCopy) == nullptr)
+		UVRM4U_VMCSubsystem* Self = WeakThis.Get();
+		if (Self == nullptr)
 		{
-			CreateServer_NoLock(AddrCopy, PortCopy);
+			return; // subsystem torn down (PIE stop / shutdown) before this ran
+		}
+		FScopeLock Lock(&Self->VMCObjectListLock);
+		Self->PendingServerKeys.Remove(FString::Printf(TEXT("%s:%d"), *AddrCopy, PortCopy));
+		if (Self->FindServer_NoLock(AddrCopy, PortCopy) == nullptr)
+		{
+			Self->CreateServer_NoLock(AddrCopy, PortCopy);
 		}
 	});
 	return nullptr;
