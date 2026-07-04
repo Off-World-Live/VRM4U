@@ -40,13 +40,41 @@ bool FVrmVMCFaceLiveLinkSchemaTest::RunTest(const FString& Parameters)
 	using namespace VrmVMCFaceLiveLinkTestHelpers;
 	const TArray<FName>& Names = VrmVMCFaceLiveLink::GetARKitPropertyNames();
 
-	// Epic's Live Link Face publishes EARFaceBlendShape::MAX = 61 properties (52 ARKit
-	// blendshapes + 9 head/eye rotation curves); the MetaHuman mapping assets expect them.
-	TestEqual(TEXT("property count matches EARFaceBlendShape::MAX"), Names.Num(), 61);
-	TestEqual(TEXT("first property is EyeBlinkLeft (enum order)"), Names[0], FName(TEXT("EyeBlinkLeft")));
-	TestEqual(TEXT("last property is RightEyeRoll (enum order)"), Names[60], FName(TEXT("RightEyeRoll")));
-	TestNotEqual(TEXT("JawOpen present"), IndexOf(TEXT("JawOpen")), (int32)INDEX_NONE);
-	TestNotEqual(TEXT("TongueOut present"), IndexOf(TEXT("TongueOut")), (int32)INDEX_NONE);
+	// The published schema must equal EARFaceBlendShape's order exactly (ARTrackable.h,
+	// entries 0..MAX). Epic's Live Link Face publishes these 61 properties and the
+	// MetaHuman ARKit mapping assets index them positionally, so any rename, reorder or
+	// insertion silently misaligns every downstream curve. Mirrored here as the
+	// authoritative contract rather than taking a runtime AugmentedReality dependency.
+	static const TCHAR* const ExpectedOrder[] = {
+		TEXT("EyeBlinkLeft"), TEXT("EyeLookDownLeft"), TEXT("EyeLookInLeft"), TEXT("EyeLookOutLeft"),
+		TEXT("EyeLookUpLeft"), TEXT("EyeSquintLeft"), TEXT("EyeWideLeft"),
+		TEXT("EyeBlinkRight"), TEXT("EyeLookDownRight"), TEXT("EyeLookInRight"), TEXT("EyeLookOutRight"),
+		TEXT("EyeLookUpRight"), TEXT("EyeSquintRight"), TEXT("EyeWideRight"),
+		TEXT("JawForward"), TEXT("JawLeft"), TEXT("JawRight"), TEXT("JawOpen"),
+		TEXT("MouthClose"), TEXT("MouthFunnel"), TEXT("MouthPucker"), TEXT("MouthLeft"), TEXT("MouthRight"),
+		TEXT("MouthSmileLeft"), TEXT("MouthSmileRight"), TEXT("MouthFrownLeft"), TEXT("MouthFrownRight"),
+		TEXT("MouthDimpleLeft"), TEXT("MouthDimpleRight"), TEXT("MouthStretchLeft"), TEXT("MouthStretchRight"),
+		TEXT("MouthRollLower"), TEXT("MouthRollUpper"), TEXT("MouthShrugLower"), TEXT("MouthShrugUpper"),
+		TEXT("MouthPressLeft"), TEXT("MouthPressRight"), TEXT("MouthLowerDownLeft"), TEXT("MouthLowerDownRight"),
+		TEXT("MouthUpperUpLeft"), TEXT("MouthUpperUpRight"),
+		TEXT("BrowDownLeft"), TEXT("BrowDownRight"), TEXT("BrowInnerUp"),
+		TEXT("BrowOuterUpLeft"), TEXT("BrowOuterUpRight"),
+		TEXT("CheekPuff"), TEXT("CheekSquintLeft"), TEXT("CheekSquintRight"),
+		TEXT("NoseSneerLeft"), TEXT("NoseSneerRight"), TEXT("TongueOut"),
+		TEXT("HeadYaw"), TEXT("HeadPitch"), TEXT("HeadRoll"),
+		TEXT("LeftEyeYaw"), TEXT("LeftEyePitch"), TEXT("LeftEyeRoll"),
+		TEXT("RightEyeYaw"), TEXT("RightEyePitch"), TEXT("RightEyeRoll"),
+	};
+
+	TestEqual(TEXT("property count matches EARFaceBlendShape::MAX"), Names.Num(), (int32)UE_ARRAY_COUNT(ExpectedOrder));
+	if (Names.Num() == (int32)UE_ARRAY_COUNT(ExpectedOrder))
+	{
+		for (int32 i = 0; i < Names.Num(); ++i)
+		{
+			TestEqual(*FString::Printf(TEXT("property %d matches EARFaceBlendShape order"), i),
+				Names[i], FName(ExpectedOrder[i]));
+		}
+	}
 
 	// No duplicates: a repeated name would silently shift every later curve.
 	TSet<FName> Unique(Names);
