@@ -335,18 +335,66 @@ bool UAutoPopulateVrmMeta::PopulateForVRM(UVrmMetaObject* InMetaObject, USkeleta
 		{TEXT("rightLittleDistal"), TEXT("J_Bip_R_Little3"), false},
 	};
 
-	TArray<FVrmBoneMapEntry> BoneMap;
-	BoneMap.Reserve(UE_ARRAY_COUNT(Seeds));
+	// VRM keeps a bespoke two-pass rather than ApplyBoneMap: the prefixed pass is
+	// all-or-nothing — if it maps fewer than half the critical bones, the whole
+	// result is discarded and retried with plain then "vrm_" names, which per-bone
+	// candidate ordering cannot reproduce.
+	int32 TotalMapped = 0;
+	int32 TotalCritical = 0;
+	int32 MappedCritical = 0;
+
 	for (const FSeed& Seed : Seeds)
 	{
-		FVrmBoneMapEntry Entry;
-		Entry.HumanoidName = Seed.Humanoid;
-		Entry.bIsCritical = Seed.bCritical;
-		Entry.Candidates = { Seed.Prefixed, Seed.Humanoid, FString::Printf(TEXT("vrm_%s"), Seed.Humanoid) };
-		BoneMap.Add(MoveTemp(Entry));
+		if (Seed.bCritical)
+		{
+			++TotalCritical;
+		}
+		if (AvailableBones.Contains(FName(Seed.Prefixed)))
+		{
+			InMetaObject->humanoidBoneTable.Add(Seed.Humanoid, Seed.Prefixed);
+			++TotalMapped;
+			if (Seed.bCritical)
+			{
+				++MappedCritical;
+			}
+		}
 	}
 
-	return ApplyBoneMap(InMetaObject, AvailableBones, BoneMap, TEXT("VRM"));
+	if (TotalMapped < TotalCritical / 2)
+	{
+		InMetaObject->humanoidBoneTable.Empty();
+		TotalMapped = 0;
+		MappedCritical = 0;
+		for (const FSeed& Seed : Seeds)
+		{
+			FString ModelBone;
+			if (AvailableBones.Contains(FName(Seed.Humanoid)))
+			{
+				ModelBone = Seed.Humanoid;
+			}
+			else
+			{
+				const FString VrmPrefixed = FString::Printf(TEXT("vrm_%s"), Seed.Humanoid);
+				if (AvailableBones.Contains(FName(*VrmPrefixed)))
+				{
+					ModelBone = VrmPrefixed;
+				}
+			}
+			if (!ModelBone.IsEmpty())
+			{
+				InMetaObject->humanoidBoneTable.Add(Seed.Humanoid, ModelBone);
+				++TotalMapped;
+				if (Seed.bCritical)
+				{
+					++MappedCritical;
+				}
+			}
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("VRM mapping: Successfully mapped %d of %d bones (%d of %d critical bones)"),
+		TotalMapped, (int32)UE_ARRAY_COUNT(Seeds), MappedCritical, TotalCritical);
+	return TotalMapped > 0;
 }
 
 bool UAutoPopulateVrmMeta::PopulateForMixamo(UVrmMetaObject* InMetaObject, USkeletalMesh* InSkeletalMesh)
