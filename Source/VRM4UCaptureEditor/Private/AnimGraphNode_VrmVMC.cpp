@@ -186,7 +186,6 @@ void UAnimGraphNode_VrmVMC::PostEditChangeProperty(FPropertyChangedEvent& Proper
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	// Check if the meta object property was changed
 	const FName PropertyName = PropertyChangedEvent.GetPropertyName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FAnimNode_VrmVMC, VrmMetaObject))
 	{

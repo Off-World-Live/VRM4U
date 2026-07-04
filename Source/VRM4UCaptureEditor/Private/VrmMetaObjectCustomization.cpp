@@ -20,7 +20,6 @@ TSharedRef<IDetailCustomization> FVrmMetaObjectCustomization::MakeInstance()
 
 void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
-    // Get the object being customized
     TArray<TWeakObjectPtr<UObject>> Objects;
     DetailBuilder.GetObjectsBeingCustomized(Objects);
     
@@ -38,7 +37,6 @@ void FVrmMetaObjectCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
     // Cache so OnAutoPopulateClicked can force a refresh after mutating the asset.
     CachedDetailBuilder = &DetailBuilder;
 
-    // Get category for rendering
     IDetailCategoryBuilder& RenderingCategory = DetailBuilder.EditCategory("Rendering", FText::GetEmpty(), ECategoryPriority::Important);
     
     // Hide all properties we want to manually reorder

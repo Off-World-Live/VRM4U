@@ -22,7 +22,6 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::Unknown;
 	}
 
-	// Get bone names to detect skeleton type
 	const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
 	TArray<FName> BoneNames;
 	for (int32 i = 0; i < RefSkeleton.GetNum(); ++i)
@@ -30,7 +29,6 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		BoneNames.Add(RefSkeleton.GetBoneName(i));
 	}
 
-	// Check for VRM specific bones
 	if (BoneNames.Contains(FName("J_Bip_C_Hips")) ||
 		BoneNames.Contains(FName("vrm_hips")) ||
 		BoneNames.Contains(FName("J_Bip_L_UpperArm")) ||
@@ -40,7 +38,6 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::VRM;
 	}
 
-	// Check for Standard MetaHuman (Mixamo-like naming)
 	if (BoneNames.Contains(FName("Hips")) &&
 		BoneNames.Contains(FName("Spine1")) &&
 		BoneNames.Contains(FName("LeftArm")) &&
@@ -50,7 +47,6 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::MetaHuman;
 	}
 
-	// Check for Epic-style MetaHuman
 	if (BoneNames.Contains(FName("pelvis")) &&
 		BoneNames.Contains(FName("spine_01")) &&
 		BoneNames.Contains(FName("clavicle_l")))
@@ -59,7 +55,6 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::MetaHuman;
 	}
 
-	// Check for Mixamo specific bones
 	if (BoneNames.Contains(FName("Hips")) &&
 		BoneNames.Contains(FName("Spine")) &&
 		BoneNames.Contains(FName("LeftArm")))
@@ -68,7 +63,6 @@ ESkeletonType UAutoPopulateVrmMeta::DetectSkeletonType(USkeletalMesh* InSkeletal
 		return ESkeletonType::Mixamo;
 	}
 
-	// Check for DAZ Genesis 8 specific bones
 	if (BoneNames.Contains(FName("pelvis")) &&
 		BoneNames.Contains(FName("abdomenLower")) &&
 		BoneNames.Contains(FName("lShldrBend")))
@@ -95,15 +89,12 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 		return false;
 	}
 
-	// Set the skeletal mesh first
 	InMetaObject->SkeletalMesh = InSkeletalMesh;
 
-	// Determine skeleton type based on preference or auto-detection
 	ESkeletonType SkeletonType = ESkeletonType::Unknown;
 
 	if (InMetaObject->SkeletonType == EVrmSkeletonType::Auto)
 	{
-		// Auto detect
 		SkeletonType = DetectSkeletonType(InSkeletalMesh);
 		if (SkeletonType == ESkeletonType::Unknown)
 		{
@@ -140,7 +131,6 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 		UE_LOG(LogTemp, Log, TEXT("Using user-specified skeleton type: %s"), *TypeName);
 	}
 
-	// Based on the determined type, populate the bone mappings
 	bool bSuccess = false;
 	switch (SkeletonType)
 	{
@@ -161,7 +151,6 @@ bool UAutoPopulateVrmMeta::AutoPopulateMetaObject(UVrmMetaObject* InMetaObject, 
 		return false;
 	}
 
-	// Apply custom bone overrides
 	ApplyCustomBoneOverrides(InMetaObject, InSkeletalMesh);
 
 	if (bSuccess)
@@ -191,10 +180,8 @@ bool UAutoPopulateVrmMeta::PopulateForVRM(UVrmMetaObject* InMetaObject, USkeleta
         return false;
     }
 
-    // Clear existing mappings
     InMetaObject->humanoidBoneTable.Empty();
 
-    // Get skeleton to find available bones
     USkeleton* Skeleton = VRMGetSkeleton(InSkeletalMesh);
     if (!Skeleton)
     {
@@ -371,7 +358,6 @@ bool UAutoPopulateVrmMeta::PopulateForVRM(UVrmMetaObject* InMetaObject, USkeleta
         }
     }
 
-    // Log mapping results
     if (bUsedPrefixedNames)
     {
         UE_LOG(LogTemp, Log, TEXT("VRM mapping: Used VRoid prefixed naming convention"));
@@ -427,10 +413,8 @@ bool UAutoPopulateVrmMeta::PopulateForMixamo(UVrmMetaObject* InMetaObject, USkel
 		return false;
 	}
 
-	// Clear existing mappings
 	InMetaObject->humanoidBoneTable.Empty();
 
-	// Get skeleton to find available bones
 	USkeleton* Skeleton = VRMGetSkeleton(InSkeletalMesh);
 	if (!Skeleton)
 	{
@@ -550,7 +534,6 @@ bool UAutoPopulateVrmMeta::PopulateForMixamo(UVrmMetaObject* InMetaObject, USkel
 		}
 	}
 
-	// Log mapping results
 	UE_LOG(LogTemp, Log, TEXT("Mixamo mapping: Successfully mapped %d of %d bones (%d of %d critical bones)"),
 			TotalMapped, BoneMap.Num(), MappedCritical, TotalCritical);
 
@@ -578,7 +561,6 @@ bool UAutoPopulateVrmMeta::PopulateForMetaHuman(UVrmMetaObject* InMetaObject, US
 		return false;
 	}
 
-	// Clear existing mappings
 	InMetaObject->humanoidBoneTable.Empty();
 
 	// Get skeleton to determine which naming convention it uses
@@ -609,7 +591,6 @@ bool UAutoPopulateVrmMeta::PopulateForMetaHuman(UVrmMetaObject* InMetaObject, US
 	int32 MappedCritical = 0;
 	TArray<FString> MissingCriticalBones;
 
-	// Create mapping data structure like we did for Mixamo
 	struct FBoneMapEntry
 	{
 		FString HumanoidName;
@@ -792,7 +773,6 @@ bool UAutoPopulateVrmMeta::PopulateForMetaHuman(UVrmMetaObject* InMetaObject, US
 		}
 	}
 
-	// Log mapping results
 	UE_LOG(LogTemp, Log, TEXT("MetaHuman mapping: Successfully mapped %d of %d bones (%d of %d critical bones)"),
 			TotalMapped, BoneMap.Num(), MappedCritical, TotalCritical);
 
@@ -820,10 +800,8 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 		return false;
 	}
 
-	// Clear existing mappings
 	InMetaObject->humanoidBoneTable.Empty();
 
-	// Get skeleton to find available bones
 	USkeleton* Skeleton = VRMGetSkeleton(InSkeletalMesh);
 	if (!Skeleton)
 	{
@@ -949,7 +927,6 @@ bool UAutoPopulateVrmMeta::PopulateForDAZ(UVrmMetaObject* InMetaObject, USkeleta
 		}
 	}
 
-	// Log mapping results
 	UE_LOG(LogTemp, Log, TEXT("DAZ mapping: Successfully mapped %d of %d bones (%d of %d critical bones)"),
 			TotalMapped, BoneMap.Num(), MappedCritical, TotalCritical);
 

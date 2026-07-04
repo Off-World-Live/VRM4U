@@ -20,7 +20,6 @@ void UVrmVMCObject::DestroyServer()
 	}
 	OSCServer.Reset(nullptr);
 
-	// Clear all data when server is destroyed
 	{
 		FScopeLock lock(&cs);
 		VMCData.ClearData();

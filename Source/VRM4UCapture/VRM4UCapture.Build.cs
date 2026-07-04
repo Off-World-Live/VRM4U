@@ -43,8 +43,6 @@ public class VRM4UCapture : ModuleRules
 
         PrivateIncludePaths.AddRange(
         new string[] {
-			// Relative to Engine\Plugins\Runtime\Oculus\OculusVR\Source
-			//"../Runtime/Renderer/Private",
         });
     }
 }

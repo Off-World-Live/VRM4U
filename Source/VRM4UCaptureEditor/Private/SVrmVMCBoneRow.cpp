@@ -48,7 +48,6 @@ void SVrmVMCBoneRow::Construct(const FArguments& InArgs)
 			[
 				SNew(SHorizontalBox)
 
-				// Status badge.
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
 				.VAlign(VAlign_Center)
@@ -89,7 +88,6 @@ void SVrmVMCBoneRow::Construct(const FArguments& InArgs)
 					]
 				]
 
-				// Mask quick toggle.
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
 				.Padding(4.0f, 0.0f, 0.0f, 0.0f)
@@ -101,7 +99,6 @@ void SVrmVMCBoneRow::Construct(const FArguments& InArgs)
 					.OnClicked(this, &SVrmVMCBoneRow::OnMaskClicked)
 				]
 
-				// Clear quick action.
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
 				.Padding(4.0f, 0.0f, 0.0f, 0.0f)
@@ -114,7 +111,6 @@ void SVrmVMCBoneRow::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// Expanded section
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(20.0f, 2.0f, 4.0f, 6.0f)

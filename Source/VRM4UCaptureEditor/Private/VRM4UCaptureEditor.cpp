@@ -35,7 +35,6 @@ void FVRM4UCaptureEditorModule::ShutdownModule()
 	FVrmRetargetSetupMenuExtension::Unregister();
 	FVrmVMCDebugTabSpawner::Unregister();
 
-	// Unregister detail customization
 	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(
@@ -43,7 +42,6 @@ void FVRM4UCaptureEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName());
 	}
 
-	// Notify that the module has been unloaded
 	UE_LOG(LogVRM4UCaptureEditor, Log, TEXT("VRM4UCaptureEditor module has been shut down"));
 }
 

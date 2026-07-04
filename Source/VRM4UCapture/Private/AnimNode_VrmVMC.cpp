@@ -20,8 +20,6 @@
 #include "GameFramework/Actor.h"
 
 #include <algorithm>
-/////////////////////////////////////////////////////
-// FAnimNode_ModifyBone
 
 FAnimNode_VrmVMC::FAnimNode_VrmVMC()
 		: BoneStateLock(MakeShared<FCriticalSection>())
@@ -34,11 +32,6 @@ FAnimNode_VrmVMC::~FAnimNode_VrmVMC()
 	FOWLVrmVMCNodeRegistry::Unregister(this);
 }
 
-
-//void FAnimNode_VrmVMC::Update_AnyThread(const FAnimationUpdateContext& Context) {
-//	Super::Update_AnyThread(Context);
-//	//Context.GetDeltaTime();
-//}
 
 void FAnimNode_VrmVMC::Initialize_AnyThread(const FAnimationInitializeContext& Context)
 {
@@ -69,7 +62,6 @@ void FAnimNode_VrmVMC::Initialize_AnyThread(const FAnimationInitializeContext& C
 		{
 			s->bForceUpdate = bForceUpdate;
 
-			// Configure performance settings based on mode
 			switch (PerformanceMode)
 			{
 			case EVMCPerformanceMode::Performance:
@@ -178,8 +170,6 @@ void FAnimNode_VrmVMC::GatherDebugData(FNodeDebugData& DebugData)
 
 	DebugLine += "(";
 	AddDebugNodeData(DebugLine);
-	//DebugLine += FString::Printf(TEXT(" Target: %s)"), *BoneToModify.BoneName.ToString());
-	//DebugLine += FString::Printf(TEXT(" Target: %s)"), *BoneNameToModify.ToString());
 	DebugData.AddDebugItem(DebugLine);
 
 	ComponentPose.GatherDebugData(DebugData);
@@ -384,7 +374,6 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 				int index = RefSkeleton.FindBoneIndex(*t.Value);
 				if (index < 0) continue;
 
-				// Convert reference skeleton index to compact pose index
 				FCompactPoseBoneIndex CompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(index);
 				if (CompactIndex == FCompactPoseBoneIndex(INDEX_NONE)) continue;
 
@@ -503,7 +492,6 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 						parentBoneIndex);
 					if (ParentCompactIndex != FCompactPoseBoneIndex(INDEX_NONE))
 					{
-						// add outtransform with ref bone
 						FBoneTransform f(ParentCompactIndex, RefSkeletonTransform[parentBoneIndex]);
 						tmpOutTransform.Add(f);
 						boneIndexTable.Add(parentBoneIndex);
@@ -514,7 +502,6 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 				}
 			}
 
-			// sort
 			tmpOutTransform.Sort(FCompareBoneTransformIndex());
 			boneIndexTable.Sort();
 		}
@@ -544,14 +531,11 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 
 bool FAnimNode_VrmVMC::IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones)
 {
-	// if both bones are valid
-	//return (BoneToModify.IsValidToEvaluate(RequiredBones));
 	return true;
 }
 
 void FAnimNode_VrmVMC::InitializeBoneReferences(const FBoneContainer& RequiredBones)
 {
-	//BoneToModify.Initialize(RequiredBones);
 }
 
 void FAnimNode_VrmVMC::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp,

@@ -63,7 +63,6 @@ private:
 	TMap<FString, float> CurveDataBuffer;
 	bool bPendingUpdate = false;
 
-	// Helper method to flush buffered data
 	void FlushBufferedData(bool bForceFlush);
 
 public:

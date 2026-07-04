@@ -12,7 +12,6 @@
 DEFINE_LOG_CATEGORY(LogVRM4UCapture);
 
 //////////////////////////////////////////////////////////////////////////
-// FSpriterImporterModule
 
 class FVRM4UCaptureModule : public FDefaultModuleImpl
 {
