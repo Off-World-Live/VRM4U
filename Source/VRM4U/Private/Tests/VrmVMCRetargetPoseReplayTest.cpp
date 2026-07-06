@@ -18,6 +18,21 @@
 #include "Retargeter/IKRetargetProfile.h"
 #include "Retargeter/RetargetOps/FKChainsOp.h"
 
+namespace
+{
+	// UE 5.7 removed FIKRetargetProcessor::ScaleSourcePose; source scaling now happens inside
+	// RunRetargeter. Only UE 5.6 needs the explicit pre-scale before RunRetargeter.
+	FORCEINLINE void ScaleSourcePoseCompat(FIKRetargetProcessor& Processor, TArray<FTransform>& InOutSourcePose)
+	{
+#if UE_VERSION_OLDER_THAN(5,7,0)
+		Processor.ScaleSourcePose(InOutSourcePose);
+#else
+		(void)Processor;
+		(void)InOutSourcePose;
+#endif
+	}
+}
+
 // Pose-replay regressions for the VMC -> IK Retargeter pipeline (docs/ik-retargeter-pipeline.md).
 // Feeds synthetic poses on the SOURCE rig through the project's RTG asset via Epic's
 // FIKRetargetProcessor (the same engine the RetargetPoseFromMesh anim node runs per frame) and
@@ -183,7 +198,7 @@ bool FVrmVMCRetargetPoseReplayElbowTest::RunTest(const FString& Parameters)
 	Processor.OnPlaybackReset();
 	TArray<FTransform> SourcePose;
 	ToComponentSpaceUnitScale(SrcRef, SrcRef.GetRefBonePose(), SourcePose);
-	Processor.ScaleSourcePose(SourcePose);
+	ScaleSourcePoseCompat(Processor,SourcePose);
 	const TArray<FTransform> BaselineTargetPose = Processor.RunRetargeter(SourcePose, Profile, DeltaTime);
 
 	// --- Frame 2: bent-elbow pose -> target pose.
@@ -194,7 +209,7 @@ bool FVrmVMCRetargetPoseReplayElbowTest::RunTest(const FString& Parameters)
 
 	TArray<FTransform> BentSourcePose;
 	ToComponentSpaceUnitScale(SrcRef, BentLocalPose, BentSourcePose);
-	Processor.ScaleSourcePose(BentSourcePose);
+	ScaleSourcePoseCompat(Processor,BentSourcePose);
 	const TArray<FTransform> BentTargetPose = Processor.RunRetargeter(BentSourcePose, Profile, DeltaTime);
 
 	// --- The regression: the target forearm must articulate, not ride rigidly.
@@ -314,10 +329,10 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 
 		Processor.OnPlaybackReset();
 		TArray<FTransform> RestIn = RestSourcePose;
-		Processor.ScaleSourcePose(RestIn);
+		ScaleSourcePoseCompat(Processor,RestIn);
 		const TArray<FTransform> RestOut = Processor.RunRetargeter(RestIn, Profile, DeltaTime);
 		TArray<FTransform> BentIn = BentSourcePose;
-		Processor.ScaleSourcePose(BentIn);
+		ScaleSourcePoseCompat(Processor,BentIn);
 		const TArray<FTransform> BentOut = Processor.RunRetargeter(BentIn, Profile, DeltaTime);
 
 		const double TgtRestAngle = InteriorElbowAngleDeg(RestOut, TgtShoulderIdx, TgtElbowIdx, TgtHandIdx);
@@ -351,7 +366,7 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 				RaisedSourcePose[SrcElbowIdx].GetLocation() - RaisedSourcePose[SrcShoulderIdx].GetLocation()).GetSafeNormal();
 
 			TArray<FTransform> RaisedIn = RaisedSourcePose;
-			Processor.ScaleSourcePose(RaisedIn);
+			ScaleSourcePoseCompat(Processor,RaisedIn);
 			const TArray<FTransform> RaisedOut = Processor.RunRetargeter(RaisedIn, Profile, DeltaTime);
 			const double TgtRaisedElbow = InteriorElbowAngleDeg(RaisedOut, TgtShoulderIdx, TgtElbowIdx, TgtHandIdx);
 			const FVector TgtArmDirBody = ToBodyFrame(RestOut, TgtPelvisIdx, TgtHeadIdx, TgtShoulderIdx, TgtShoulderRIdx,
@@ -383,7 +398,7 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 				TwistSourcePose[SrcHandIdx].GetLocation(), RestSourcePose[SrcHandIdx].GetLocation());
 
 			TArray<FTransform> TwistIn = TwistSourcePose;
-			Processor.ScaleSourcePose(TwistIn);
+			ScaleSourcePoseCompat(Processor,TwistIn);
 			const TArray<FTransform> TwistOut = Processor.RunRetargeter(TwistIn, Profile, DeltaTime);
 			const double TgtTwistElbow = InteriorElbowAngleDeg(TwistOut, TgtShoulderIdx, TgtElbowIdx, TgtHandIdx);
 			const double TgtTwistHandTravel = FVector::Dist(
@@ -543,7 +558,7 @@ bool FVrmVMCRetargetCapturedPoseTest::RunTest(const FString& Parameters)
 
 	Processor.OnPlaybackReset();
 	TArray<FTransform> SourceIn = CapturedSource;
-	Processor.ScaleSourcePose(SourceIn);
+	ScaleSourcePoseCompat(Processor,SourceIn);
 	const TArray<FTransform> Replayed = Processor.RunRetargeter(SourceIn, Profile, 1.f / 30.f);
 
 	// Per-bone divergence: replayed offline output vs the captured LIVE final pose.
