@@ -1,32 +1,19 @@
 # IK Retargeter Pipeline — MetaHuman / DAZ live VMC
 
-Status: **BUILT + live-tested (2026-05-31)** for OWLVRM→MetaHuman. The assets exist
-(`IK_OWLVRM`, `IK_SKM_MetaHumanCharacter_BodyMesh`, `RTG_OWLVRM_to_MetaHuman`) and the MetaHuman is
-driven live via the `UVrmVMCRetargetAnimInstance` C++ class (Layer B, built — see
-[ik-retargeter-asset-setup.md](ik-retargeter-asset-setup.md) for the full setup walkthrough). The
-plain-`RetargetPoseFromMesh`-in-AnimBP route below (Layer A) needs **no plugin C++** and still works
-as a fallback.
+This is the **manual, step-by-step** version of the MetaHuman/DAZ retarget setup. The one-click
+wizard (right-click the actor ▸ **VRM4U: Auto-Setup VMC Retarget**, see
+[retarget-setup-wizard.md](retarget-setup-wizard.md)) automates all of it. Follow this when you
+want to build the assets by hand, understand what the wizard produced, or repair a setup it could
+not complete. The click-by-click for each asset is in
+[ik-retargeter-asset-setup.md](ik-retargeter-asset-setup.md).
 
-**Fidelity sweep results (2026-07-02, `VRM4U.VMC.RetargetPoseReplay.ElbowFidelity`):** with the
-auto-aligned retarget pose, the pipeline retargets **rest pose, elbow bends, shoulder swings, and
-upper-arm twist essentially perfectly** in every FK rotation mode (0° phantom elbow bend on shoulder
-motion; twist does not leak into swing). The one measured defect: **MatchChain under-bends elbows by
-14.2°** and adds ~2° direction error, while **Interpolated and OneToOne transfer the bend exactly
-(0.0°)** — so arm chains should not use MatchChain. Any live discrepancy beyond ~15° therefore comes
-from outside the retargeter (source pose content, node wiring, or post-retarget modification), not
-from the RTG/chain config.
+**Chain-mode note:** for arm chains use **Interpolated** or **One-to-One** FK rotation mode, not
+**Match Chain** (Match Chain under-bends elbows). If a limb looks limp and does not respond to
+changing the FK Rotation Mode, its bones are not inside the retargeted chain (see the gotchas
+below). A distorted source pose retargets the distortion too, so confirm the source rig looks
+correct first.
 
-**Pose-replay regression: BUILT + PASSING (2026-07-02).** `VRM4U.VMC.RetargetPoseReplay.ElbowBend`
-(`Source/VRM4U/Private/Tests/VrmVMCRetargetPoseReplayTest.cpp`) drives Epic's `FIKRetargetProcessor`
-headlessly with a synthetic 60° elbow bend on `SK_OWLVRM` through `RTG_OWLVRM_to_MetaHuman`: source
-hand moved 25.0 cm → **target hand moved 31.4 cm, target elbow rotated 60.0°** (1:1 transfer). Combined
-with the asset dump (see setup doc), the retargeter + assets are **proven to articulate the forearm** —
-so the live "limp forearm" must come from upstream: verify during mocap that the **VRoid source's own
-forearm moves**. If the VRoid forearm is limp too, the issue is the XR Animator stream / VMC meta
-mapping, not this pipeline. (Also check whether MetaHuman *forearm-twist* bones are what looks limp —
-that's the body Post-Process AnimBP's job, separate from retargeting.)
-
-> **Live tuning gotchas (from first live test):**
+> **Live tuning gotchas:**
 > - **The source rig must be the clean gold-standard pose** — no extra pose-modifying nodes between
 >   the VMC node and Output Pose, or the retargeter transfers the distortion too.
 > - **Limp forearm/hand that doesn't respond to FK Rotation Mode changes** = the bones aren't in the
@@ -114,10 +101,8 @@ ticks and evaluates, which is all the retargeter needs.
 5. Preview with an animation on the source to confirm limbs track before going live.
 
 ### Step 5 — Wire the retarget node into the MetaHuman body AnimBP
-1. Open the MetaHuman **body** AnimBP. (Per the audit, this is the `ABP_MetahumanVMC`/body
-   graph — and there must be **no leftover VMC node** anywhere on the MetaHuman, e.g. the stray
-   one previously in `ABP_Body_PostProcess`. The MetaHuman is now driven *only* by the
-   retarget node.)
+1. Open the MetaHuman **body** AnimBP. Make sure there is **no leftover VMC node** anywhere on the
+   MetaHuman (including its Post-Process AnimBP). The MetaHuman is driven *only* by the retarget node.
 2. Add **Retarget Pose From Mesh** → feed it into Output Pose.
 3. Set `IKRetargeterAsset = RTG_Mixamo_To_MetaHuman`.
 4. Set **Retarget From = Custom Skeletal Mesh Component**, then expose the **Source Mesh Component**
@@ -155,20 +140,9 @@ Run the **stand → sit error-curve test**:
   offsets.
 - **DAZ**: same pipeline, different IK Rig + RTG asset (`RTG_Mixamo_To_DAZ`).
 
-## After Layer A passes → Layer B (C++, separate task)
-A VRM4U component/helper that spawns + hides the Mixamo proxy, wires the shared
-`UVrmVMCObject` OSC stream to it, sets the retarget `SourceMeshComponent` + tick prerequisite
-automatically, and surfaces it in the VMC debug panel — so one dropped VRM4U actor yields
-MetaHuman live mocap with no manual leader/follower setup.
-
-> **Do NOT subclass `UVrmAnimInstanceRetargetFromMannequin` for a MetaHuman target.** That class
-> already wraps Epic's `FAnimNode_RetargetPoseFromMesh`, BUT its proxy `Evaluate()` returns early
-> if `DstVrmAssetList == nullptr` and then runs VRM spring-bone/constraint passes — it is built for
-> **VRM targets**, not MetaHuman/DAZ. For a non-VRM target, either (a) use the stock node in the
-> AnimBP (Layer A, zero C++), or (b) write a small standalone `UAnimInstance` whose proxy just runs
-> `FAnimNode_RetargetPoseFromMesh` with `RetargetFrom = CustomSkeletalMeshComponent`. The convenience
-> value of Layer B is the proxy spawn + auto-wire + tick-prereq, not reusing the VRM retarget class.
-
-The C++ for Layer B references `UIKRetargeter`/the node types, so its module needs `IKRig` in
-`.Build.cs` (the `VRM4U` module already has it; `VRM4UCapture` does not). Do not start Layer B
-until the Layer A error curve above is confirmed flat.
+## Automating this (the wizard)
+The one-click **VRM4U: Auto-Setup VMC Retarget** does everything above for you: it creates the IK
+rigs and the `RTG_*` asset, auto-aligns the target retarget pose, spawns and hides the source
+proxy, wires the retarget source component and tick prerequisite, and sets the actor's Anim Class
+to `VrmVMCRetargetAnimInstance`. Use this manual walkthrough only to understand or repair what the
+wizard produced. See [retarget-setup-wizard.md](retarget-setup-wizard.md).

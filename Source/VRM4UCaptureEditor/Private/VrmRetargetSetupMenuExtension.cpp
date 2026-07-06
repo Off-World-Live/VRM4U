@@ -64,6 +64,8 @@ namespace
 				Ref.FindBoneIndex(TEXT("thigh_l")) != INDEX_NONE ||
 				Ref.FindBoneIndex(TEXT("lThighBend")) != INDEX_NONE ||
 				Ref.FindBoneIndex(TEXT("LeftUpLeg")) != INDEX_NONE ||
+				Ref.FindBoneIndex(TEXT("mixamorig:LeftUpLeg")) != INDEX_NONE ||
+				Ref.FindBoneIndex(TEXT("LeftUpperLeg")) != INDEX_NONE ||
 				Ref.FindBoneIndex(TEXT("l_thigh")) != INDEX_NONE;
 			if (!bHasLegs)
 			{
@@ -122,7 +124,7 @@ namespace
 		}
 
 		// The full step log has already gone to LogVRM4UCaptureEditor; notify with the tail.
-		const FString Summary = Report.Messages.Num() > 0 ? Report.Messages.Last() : FString(TEXT("No report."));
+		const FString Summary = Report.Messages.Num() > 0 ? Report.Messages.Last() : FString(TEXT("See the Output Log for details."));
 		FNotificationInfo Info(FText::Format(
 			Report.bSuccess
 				? LOCTEXT("SetupOkFmt", "VMC retarget set up for '{0}'.\n{1}")
@@ -141,7 +143,7 @@ namespace
 	{
 		const FVrmRetargetSetupReport Report = UVrmRetargetSetupUtil::SetupVMCFaceForActor(Actor, NAME_None);
 
-		const FString Summary = Report.Messages.Num() > 0 ? Report.Messages.Last() : FString(TEXT("No report."));
+		const FString Summary = Report.Messages.Num() > 0 ? Report.Messages.Last() : FString(TEXT("See the Output Log for details."));
 		FNotificationInfo Info(FText::Format(
 			Report.bSuccess
 				? LOCTEXT("FaceSetupOkFmt", "VMC face LiveLink set up for '{0}'.\n{1}")
@@ -191,7 +193,7 @@ namespace
 			TEXT("VrmSceneLint"),
 			LOCTEXT("LintEntryLabel", "VRM4U: Lint VMC Scene"),
 			LOCTEXT("LintEntryTooltip",
-				"Check every skeletal mesh in the level for the known VMC retarget misconfigurations (direct VMC node on a non-VRM rig, zero-offset retarget pose, missing clavicle/finger chains, stale per-op IK rig, unwired retarget instance, unbound MetaHuman face) and log fix hints."),
+				"Scan the level for common VMC retarget and face setup problems, then log how to fix each one."),
 			FSlateIcon(),
 			FUIAction(FExecuteAction::CreateStatic(&RunSceneLint)));
 	}
@@ -205,7 +207,7 @@ namespace
 		{
 			return;
 		}
-		FToolMenuSection& Section = Menu->FindOrAddSection("ActorOptions");
+		FToolMenuSection& Section = Menu->FindOrAddSection("VRM4U", LOCTEXT("VrmSectionLabel", "VRM4U"));
 		Section.AddDynamicEntry(TEXT("VrmRetargetSetup"), FNewToolMenuSectionDelegate::CreateLambda(
 			[](FToolMenuSection& InSection)
 			{
@@ -226,7 +228,7 @@ namespace
 						TEXT("VrmRetargetSetupEntry"),
 						LOCTEXT("SetupEntryLabel", "VRM4U: Auto-Setup VMC Retarget"),
 						LOCTEXT("SetupEntryTooltip",
-							"Create/reuse the IK rigs and IK Retargeter (with an auto-aligned retarget pose) needed to drive this character from the live VMC-driven VRM rig, and set its Anim Class to VrmVMCRetargetAnimInstance."),
+							"Set this character up to follow the live VMC motion through an IK Retargeter. Requires a VRM/VRoid character in the level as the motion source."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([WeakActor = TWeakObjectPtr<AActor>(Actor)]()
 						{
@@ -239,7 +241,7 @@ namespace
 						TEXT("VrmFaceSetupEntry"),
 						LOCTEXT("FaceSetupEntryLabel", "VRM4U: Auto-Setup VMC Face (LiveLink)"),
 						LOCTEXT("FaceSetupEntryTooltip",
-							"Drive this character's face from the VMC blendshape stream: assign the stock LiveLink face AnimBP (ABP_MH_LiveLink) to the face mesh and add the VRM4U component that publishes the VMC curves as an ARKit LiveLink subject at play time. Requires the engine's Live Link plugin."),
+							"Drive this character's face from the VMC blendshape stream through a LiveLink ARKit subject. Requires the engine's Live Link plugin."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([WeakActor = TWeakObjectPtr<AActor>(Actor)]()
 						{

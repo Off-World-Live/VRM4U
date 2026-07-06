@@ -15,7 +15,7 @@ It is hidden for native VRM actors (those are VMC sources, not targets).
 1. Finds the live VRM source in the level (native VRM bone naming preferred over
    AutoPopulate-meta-only matches, so a DAZ with a meta table is never picked as source).
 2. Reuses an existing retargeter for the pair if one exists (e.g. the hand-built
-   `RTG_OWLVRM_to_MetaHuman`), healing a zero-offset retarget pose if found — otherwise:
+   `RTG_<yourVRM>_to_MetaHuman`), healing a zero-offset retarget pose if found — otherwise:
 3. Finds-or-creates the **source IK rig**. Existing rigs are reused only when their chain
    names are the engine-standard set (`LeftClavicle`, not `LeftShoulder` — exact chain
    mapping is by name). Otherwise a new `IK_<mesh>_VRM4U` is built from the VRM humanoid

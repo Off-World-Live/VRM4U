@@ -265,7 +265,7 @@ namespace
 				{
 					Findings.Add(MakeFinding(EVrmLintSeverity::Warning, TEXT("ClavicleChainUnmapped"),
 						FString::Printf(TEXT("'%s' (targets %s): no mapped clavicle/shoulder chain — arm raises will fall ~50 degrees short."), *Retargeter->GetName(), *Label),
-						TEXT("Add single-bone shoulder chains on both rigs and re-map (docs/ik-retargeter-asset-setup.md, Step 1.4).")));
+						TEXT("Add single-bone shoulder chains on both rigs and re-map (see the VRM4U retarget setup guide).")));
 				}
 				int32 MappedFingers = 0;
 				for (const TCHAR* Finger : { TEXT("Thumb"), TEXT("Index"), TEXT("Middle"), TEXT("Ring"), TEXT("Pinky"), TEXT("Little") })
@@ -282,7 +282,7 @@ namespace
 				{
 					Findings.Add(MakeFinding(EVrmLintSeverity::Warning, TEXT("FingerChainsUnmapped"),
 						FString::Printf(TEXT("'%s' (targets %s): no finger chains mapped — fists/hand tracking will not transfer."), *Retargeter->GetName(), *Label),
-						TEXT("Add finger chains on BOTH rigs (proximal -> distal), re-map, re-align (validated 2026-07-02: 12 degrees vs 101.6 degrees fist curl).")));
+						TEXT("Add finger chains on BOTH rigs (proximal -> distal), re-map, then re-align the new bones.")));
 				}
 			}
 		}
@@ -314,13 +314,13 @@ TArray<FVrmSceneLintFinding> UVrmSceneLint::LintComponent(USkeletalMeshComponent
 		{
 			Findings.Add(MakeFinding(EVrmLintSeverity::Warning, TEXT("VmcNodeOnNonVrmRig"),
 				FString::Printf(TEXT("%s: anim class '%s' drives this non-VRM rig with a direct VMC node. Its bind pose measures as T-pose, so this can track correctly - but it depends on that bind pose staying T-pose."), *Label, *AnimClass->GetName()),
-				TEXT("Working setups can stay; for new rigs prefer 'VRM4U: Auto-Setup VMC Retarget' (docs/ik-retargeter-pipeline.md).")));
+				TEXT("Working setups can stay; for new rigs prefer 'VRM4U: Auto-Setup VMC Retarget'.")));
 		}
 		else
 		{
 			Findings.Add(MakeFinding(EVrmLintSeverity::Error, TEXT("VmcNodeOnNonVrmRig"),
-				FString::Printf(TEXT("%s: anim class '%s' drives this non-VRM, non-T-pose rig with a direct VMC node - poses will be visibly wrong (the A-pose offset failure)."), *Label, *AnimClass->GetName()),
-				TEXT("Use the IK Retargeter path instead: run 'VRM4U: Auto-Setup VMC Retarget' on this actor (docs/ik-retargeter-pipeline.md).")));
+				FString::Printf(TEXT("%s: anim class '%s' drives this non-VRM, non-T-pose rig with a direct VMC node - poses will be visibly wrong (arms and legs ride offset from the source)."), *Label, *AnimClass->GetName()),
+				TEXT("Use the IK Retargeter path instead: run 'VRM4U: Auto-Setup VMC Retarget' on this actor.")));
 		}
 	}
 

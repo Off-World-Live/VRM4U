@@ -1,4 +1,6 @@
-> **Off World Live Fork:** This is a fork of [VRM4U](https://github.com/ruyo/VRM4U) with extended support for non-VRM skeletons. See our [Wiki](https://github.com/Off-World-Live/VRM4U/wiki).
+> **Off World Live Fork:** This is a fork of [VRM4U](https://github.com/ruyo/VRM4U) with extended support for non-VRM skeletons (MetaHuman, DAZ, Mixamo) and live VMC mocap. See our [Wiki](https://github.com/Off-World-Live/VRM4U/wiki).
+>
+> **Fork features (UE 5.6):** live VMC mocap with automatic bone mapping, one-click IK Retargeter setup for MetaHuman and DAZ, a VMC-to-LiveLink face bridge for MetaHuman faces, a live tuning panel, and a Blueprint API. Full guide: **[`docs/vmc-guide.md`](docs/vmc-guide.md)**.
 
 # VRM4U
 

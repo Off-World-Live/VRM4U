@@ -41,12 +41,12 @@ Rigs and the IK Retargeter asset. Naming: `<yourVRM>` = your VRoid/VRM source me
 
    *(A single-bone chain just has the same start and end. Skip fingers/toes for the first pass.)*
 
-   > **The Shoulder chains are NOT optional for live mocap.** Measured 2026-07-02: XR Animator puts
-   > roughly HALF of a full arm raise into the VRM shoulder bones (56–69° of bone rotation). Without
-   > these chains the target's arms stop ~50° short of overhead while everything else looks right.
+   > **The Shoulder chains are NOT optional for live mocap.** XR Animator puts roughly HALF of a
+   > full arm raise into the VRM shoulder bones. Without these chains the target's arms stop ~50°
+   > short of overhead while everything else looks right.
 
    **Finger chains (for hand tracking / fists)** — add these too, same pattern on both rigs
-   (validated 2026-07-02: source fist curl 101.7° → target 101.6° with them; 12° without):
+   (without them a fist barely curls on the target):
 
    | Chain name | VRoid start → end | MetaHuman start → end |
    |---|---|---|
@@ -72,7 +72,7 @@ Rigs and the IK Retargeter asset. Naming: `<yourVRM>` = your VRoid/VRM source me
 
 1. **First check if one already exists.** MetaHumans usually ship `IK_metahuman` (or `IKRig_...`) in the MetaHuman/Common folders. If you find it, **open it and just verify** it has a retarget root (`pelvis`) and chains — if so, skip to step 3 and use it. *Reusing the shipped rig saves work and is already correct.*
 2. If none exists: Content Browser → find the MetaHuman **body** Skeletal Mesh (the body, not face) → **right-click → Create → IK Rig** → name `IK_MetaHuman`.
-3. **Set retarget root:** Hierarchy → right-click `pelvis` → **Set Retarget Root.**
+3. **Set the retarget root:** Hierarchy → right-click `pelvis` → **Set Pelvis.** (Same action as Step 1.3. In UE 5.6 the menu item is literally "Set Pelvis", and it *is* the retarget root.)
 4. **Add the same-named chains** (names MUST match Step 1 exactly):
 
    | Chain name | Start bone | End bone |
@@ -119,8 +119,8 @@ The IK Retargeter's op stack is the real config. Confirmed in engine source:
 - The asset-level **Default Target IK Rig** dropdown (`UIKRetargeterController::SetIKRig`) only pushes
   to ops where `UsesDefaultIKRig()` is true — ops holding a **custom** IK rig are skipped.
 
-When you Create-IK-Retargeter from `IK_OWLVRM`, `OnAddedToStack` runs `ApplyIKRigs(default source,
-default target)` where target ALSO defaulted to `IK_OWLVRM`, baking the VRoid rig + VRoid chain
+When you Create-IK-Retargeter from `IK_<yourVRM>`, `OnAddedToStack` runs `ApplyIKRigs(default source,
+default target)` where target ALSO defaulted to `IK_<yourVRM>`, baking the VRoid rig + VRoid chain
 mapping into each op. Changing the Default Target dropdown afterward does NOT rewrite those ops →
 the FK op still resolves "Spine"→`J_Bip_C_*` and looks for them in the MetaHuman mesh → "could not
 find J_Bip_* in mesh SKM_MetaHumanCharacter_BodyMesh".
@@ -128,7 +128,7 @@ find J_Bip_* in mesh SKM_MetaHumanCharacter_BodyMesh".
 **THE FIX — re-point each op's own IK Rig, or recreate clean:**
 - **Cleanest:** delete the RTG. Before recreating, set the project/editor up so the target resolves
   to the MetaHuman, OR immediately after Create, in EACH op's Details set its **IK Rig Asset** (FK
-  Chains op, IK Chains op) to `IK_SKM_MetaHumanCharacter_BodyMesh`, then use the chain panel's
+  Chains op, IK Chains op) to `IK_MetaHuman`, then use the chain panel's
   **Auto-Map Chains → Map All (Exact)** so chains rebind to MetaHuman bones. For the Root Motion op
   set **Source Root**=`root` (or VRoid root), **Target Root**=`root`, **Target Pelvis**=`pelvis`.
 - After re-pointing, the "out of sync / J_Bip not found" warnings clear because each op now resolves
@@ -138,8 +138,8 @@ find J_Bip_* in mesh SKM_MetaHumanCharacter_BodyMesh".
   works since both rigs use identical chain names.
 
 ## GOTCHA: "missing target pelvis bone J_Bip_C_Hips" / "chain data out of sync" after creating the RTG
-Confirmed 2026-05-30 by inspecting the .uasset bytes: the two IK rigs were perfect, but the
-retargeter had a stale VRoid bone (`J_Bip_C_Hips`) baked into its **Root Motion op**. Cause: when you
+In practice the two IK rigs are usually fine, but the retargeter can have a stale VRoid bone
+(`J_Bip_C_Hips`) baked into its **Root Motion op**. Cause: when you
 right-click an IK Rig → Create IK Retargeter, UE defaults the **Target to the same rig as the Source**
 (VRoid) and bakes the op-stack against VRoid bones. Switching the Target to the MetaHuman re-resolves
 the **chain mappings by name** (so most errors clear) but the **Root Motion op keeps the old root bone**.
@@ -153,20 +153,19 @@ Note: for **live VMC mocap, root motion retargeting is not in the critical path*
 from the **FK Chain** ops and hips come from the VMC stream — so a lingering root-motion warning usually
 doesn't break the visual result.
 
-> **Step 3.4 status (2026-07-02): DONE programmatically.** The RTG shipped with zero-offset "Default
-> Pose" on both sides (Step 3.4 had been skipped — this made the MetaHuman's arms ride ~45° low while
-> elbows still articulated). Fixed by creating target pose **`VRM4U_AutoAligned`** via the Python
-> controller API (`create_retarget_pose` + `set_current_retarget_pose` + `auto_align_all_bones(TARGET)`)
-> — offsets landed at upperarm ±52.7°, lowerarm ±36.6°, exactly the A→T reconciliation. "Default Pose"
-> is untouched; to roll back, pick it in the RTG editor's pose dropdown.
+> **The retarget pose is what the wizard automates.** A freshly created RTG has a zero-offset
+> "Default Pose" on both sides. Left unaligned, the MetaHuman's arms ride ~45° low while the elbows
+> still articulate. The wizard creates an aligned target pose (**`VRM4U_AutoAligned`**) and runs
+> Auto-Align on it. "Default Pose" stays untouched, so you can roll back by picking it in the RTG
+> editor's pose dropdown.
 
 ## Verify the assets headlessly (no editor clicking)
 `Content/Python/VRM4U_DumpIKRetargetChains.py` dumps both IK rigs (root + every chain's start/end
 bone) and the RTG's op stack (per-op target rig, per-op chain mapping, full op settings incl. FK
 RotationMode) via `UnrealEditor-Cmd -run=pythonscript` — run command in the script header, then grep
-the log for `CHAINDUMP`. Ran 2026-07-02 on `RTG_OWLVRM_to_MetaHuman`: everything checked out (arm
-chains end at the hands on both rigs, all 7 chains mapped, MatchChain saved on every chain) — so if
-a limb is limp with a clean dump, the problem is the **source pose or runtime wiring**, not these assets.
+the log for `CHAINDUMP`. If the dump is clean (arm chains end at the hands on both rigs, all chains
+mapped) but a limb is still limp, the problem is the **source pose or runtime wiring**, not these
+assets.
 
 ## If something looks off
 - **A whole limb doesn't move** → that chain is missing or unmapped (Step 1.4 / Step 3.3).

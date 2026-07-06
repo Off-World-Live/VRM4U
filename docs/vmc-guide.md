@@ -6,10 +6,9 @@
 > **✦ = New in this fork.** Anything marked ✦ is a feature this fork adds on top of VRM4U's existing
 > VMC support; unmarked items are part of stock VRM4U. See [§1](#1-what-you-get) for the at-a-glance list.
 >
-> **Companion docs:** [`metahuman-alignment-findings.md`](metahuman-alignment-findings.md) (the diagnosis behind
-> the alignment work), [`retarget-setup-wizard.md`](retarget-setup-wizard.md) (one-click MetaHuman/DAZ setup),
-> [`vmc-face-livelink-bridge.md`](vmc-face-livelink-bridge.md) (MetaHuman face from the VMC stream),
-> [`vmc-stability-audit-fixes.md`](vmc-stability-audit-fixes.md) (the crash/bug hardening pass).
+> **Companion docs:** [`retarget-setup-wizard.md`](retarget-setup-wizard.md) (one-click MetaHuman/DAZ
+> setup) and [`vmc-face-livelink-bridge.md`](vmc-face-livelink-bridge.md) (MetaHuman face from the VMC
+> stream).
 
 ---
 
@@ -116,7 +115,7 @@ and **Pose application** groups are stock VRM4U; **Performance** (✦) is added 
 |---|---|---|---|
 | `bUseRemoteCenterPos` | bool | `true` | Apply the sender's root/hips translation. Turn off if your rig has its own root motion/controller. |
 | `ModelRelativeScale` | float | `1.0` | Scales incoming translations (not rotations). >1 enlarges, <1 shrinks the motion. |
-| `bIgnoreLocalRotation` | bool | `false` | Pose-application mode. When on, the incoming rotation is rebased onto this rig's bind pose (`C = r_vmc · r_refg`) instead of applied as a local rotation. |
+| `bIgnoreLocalRotation` | bool | `false` | Pose-application mode. When **on**, the incoming rotation is rebased onto this rig's bind pose (conjugated by the bind-pose rotation) instead of being applied directly as the bone's local rotation (the default, **off**). |
 | `bApplyPerfectSync` | bool | `true` | Apply the full blendshape (Perfect Sync) curve set for facial capture. |
 
 ### Performance ✦
@@ -201,8 +200,8 @@ The Meta object has a `SkeletonType` you set:
 
 **✦ New in this fork.**
 
-The VMC node applies each incoming rotation as a *delta onto this rig's own bind pose*. That tracks
-the sender 1:1 on rigs whose bind pose matches the VMC reference — VRoid and Mixamo, both **T-pose**.
+By default the VMC node applies each incoming rotation directly to the matching bone. That tracks
+the sender 1:1 on rigs whose bind pose matches the VMC reference (VRoid and Mixamo, both **T-pose**).
 MetaHuman and DAZ ship in **A-pose** with different bone-axis conventions, so the same incoming
 rotation lands their limbs at a different absolute angle: driving them directly with the VMC node
 misaligns, and no constant per-bone fixup can hold across the pose range (it drifts at far poses —
@@ -266,6 +265,11 @@ in the per-bone pipeline:
 | **Mask** | Skip the bone entirely; the upstream pose is kept, nothing is written. |
 | **Pre-rebase override** | Replace the incoming `r_vmc` with a fixed rotation, *then still run the rebase*. |
 | **Post-rebase override** | Replace the final rotation outright, bypassing the rebase. |
+
+> **Default mode vs rebase mode.** The **rebase** step only runs when the node's
+> `bIgnoreLocalRotation` is **on**. In the default mode (**off**) the incoming rotation is applied
+> directly, so a **pre-rebase override** simply becomes the bone's applied rotation and a
+> **post-rebase override** still replaces the final rotation. **Mask** behaves the same either way.
 
 **Which one do I want?**
 
@@ -529,7 +533,8 @@ bool IsVMCFaceLiveLinkActive(FName SubjectName);
 - **Meta object** (`UVrmMetaObject`) — holds the `humanoidBoneTable` (humanoid name → skeleton bone)
   and the `SkeletonType`.
 - **Rebase** — applying the incoming VMC rotation as a delta onto a rig's bind pose to get the final
-  bone rotation.
+  bone rotation. Only active when the node's `bIgnoreLocalRotation` is on. The default applies the
+  rotation directly.
 - **Pre-rebase override** — replace the incoming rotation, then rebase.
 - **Post-rebase override** — replace the final rotation, bypassing the rebase.
 - **Mask** — skip a bone/curve entirely, keeping the upstream value.
