@@ -52,6 +52,4 @@ no LiveLink dependency at all (lint detects LiveLink ABPs by struct *name*).
   (`Private/Tests/VrmVMCFaceLiveLinkTest.cpp`) — schema shape (61, enum order, unique),
   PerfectSync pass-through + prefix strip, fallback fan-out, max-on-collision, ARKit keys never
   fan out, unknown keys ignored.
-- `Content/Python/VRM4U_ValidateRetargetSetup.py` gained a face section: runs the face wizard on
-  the map's MetaHuman actor headlessly and asserts anim class + bridge component + subject.
 - Final visual check (XR Animator → MetaHuman face in PIE) is manual, per usual.
