@@ -454,7 +454,10 @@ namespace
 		return nullptr;
 	}
 
-	UIKRigDefinition* FindOrCreateIKRig(USkeletalMesh* Mesh, const FString& Folder, TArray<FString>& Messages)
+	// bUseVrmChainBuilder: VRM chain builder (meta table if present) vs engine auto-characterizer.
+	// Caller-picked because a foreign rig (e.g. DAZ) can carry a meta table yet still need the
+	// auto-characterizer for its real spine layout.
+	UIKRigDefinition* FindOrCreateIKRig(USkeletalMesh* Mesh, const FString& Folder, bool bUseVrmChainBuilder, TArray<FString>& Messages)
 	{
 		if (UIKRigDefinition* Existing = FindReusableIKRig(Mesh, Messages))
 		{
@@ -474,9 +477,9 @@ namespace
 		}
 
 		bool bBuilt = false;
-		if (ResolvesAsVrmHumanoid(Mesh))
+		if (bUseVrmChainBuilder)
 		{
-			Log(Messages, FString::Printf(TEXT("'%s' resolves as a VRM humanoid - building standard VRM chain set."), *Mesh->GetName()));
+			Log(Messages, FString::Printf(TEXT("Building the standard VRM chain set for '%s'."), *Mesh->GetName()));
 			bBuilt = BuildVrmRetargetChains(Rig, Mesh, Messages);
 		}
 		else
@@ -633,7 +636,7 @@ FVrmRetargetSetupReport UVrmRetargetSetupUtil::SetupRetarget(USkeletalMesh* Sour
 	}
 	else if (ResolvesAsVrmHumanoid(TargetMesh))
 	{
-		Log(Report.Messages, FString::Printf(TEXT("NOTE: target '%s' has an AutoPopulate VRM meta table (direct VMC path - known-broken for non-VRM bind poses). The retargeter this wizard sets up is the correct replacement; its bone table is reused to build the target chains."), *TargetMesh->GetName()));
+		Log(Report.Messages, FString::Printf(TEXT("NOTE: target '%s' has an AutoPopulate VRM meta table (direct VMC path - known-broken for non-VRM bind poses). This wizard builds an IK Retargeter instead; its target chains come from the engine auto-characterizer."), *TargetMesh->GetName()));
 	}
 
 	const FString Folder = ChooseAssetFolder(TargetMesh, AssetFolder);
@@ -657,12 +660,14 @@ FVrmRetargetSetupReport UVrmRetargetSetupUtil::SetupRetarget(USkeletalMesh* Sour
 		return Report;
 	}
 
-	Report.SourceIKRig = FindOrCreateIKRig(SourceVrmMesh, Folder, Report.Messages);
+	// Source is the validated VRM; the VRM builder handles it (native or meta-table bones).
+	Report.SourceIKRig = FindOrCreateIKRig(SourceVrmMesh, Folder, /*bUseVrmChainBuilder=*/true, Report.Messages);
 	if (Report.SourceIKRig == nullptr)
 	{
 		return Report;
 	}
-	Report.TargetIKRig = FindOrCreateIKRig(TargetMesh, Folder, Report.Messages);
+	// Native VRM target -> VRM builder; any foreign rig (even meta-tabled) -> auto-characterizer.
+	Report.TargetIKRig = FindOrCreateIKRig(TargetMesh, Folder, /*bUseVrmChainBuilder=*/ResolvesAsNativeVrmHumanoid(TargetMesh), Report.Messages);
 	if (Report.TargetIKRig == nullptr)
 	{
 		return Report;
