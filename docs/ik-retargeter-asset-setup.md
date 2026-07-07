@@ -109,23 +109,19 @@ Rigs and the IK Retargeter asset. Naming: `<yourVRM>` = your VRoid/VRM source me
 Set the MetaHuman body mesh's **Anim Class** to `UVrmVMCRetargetAnimInstance`, then set its
 `SourceMeshComponent` = your live VRM component and `Retargeter` = `RTG_<yourVRM>_to_MetaHuman`.
 
-## ROOT CAUSE (from UE 5.6 engine source): per-op IK Rig, not the asset-level target
-The IK Retargeter's op stack is the real config. Confirmed in engine source:
-- `FIKRetargetFKChainsOpSettings` has its **own** `IKRigAsset` (FKChainsOp.h:176-177) and the FK op
-  keeps its **own** `FRetargetChainMapping ChainMapping` (FKChainsOp.h:260, "this op maintains its own
-  chain mapping table").
-- `FIKRetargetRootMotionOpSettings` has its own `SourceRoot`, `TargetRoot`, `TargetPelvis`
-  (`FBoneReference`s, RootMotionGeneratorOp.h:36-51).
-- The asset-level **Default Target IK Rig** dropdown (`UIKRetargeterController::SetIKRig`) only pushes
-  to ops where `UsesDefaultIKRig()` is true. Ops holding a **custom** IK rig are skipped.
+## Background: the per-op IK Rig, not the asset-level target
+In UE 5.6 the IK Retargeter's op stack is the real configuration:
+- The **FK Chains op** carries its own IK Rig reference and its own chain-mapping table.
+- The **Root Motion op** carries its own source root, target root, and target pelvis.
+- The asset-level **Default Target IK Rig** dropdown only updates ops that still use the default
+  rig. Ops holding a custom IK rig are left untouched.
 
-When you Create-IK-Retargeter from `IK_<yourVRM>`, `OnAddedToStack` runs `ApplyIKRigs(default source,
-default target)` where target ALSO defaulted to `IK_<yourVRM>`, baking the VRoid rig + VRoid chain
-mapping into each op. Changing the Default Target dropdown afterward does NOT rewrite those ops →
-the FK op still resolves "Spine"→`J_Bip_C_*` and looks for them in the MetaHuman mesh → "could not
-find J_Bip_* in mesh SKM_MetaHumanCharacter_BodyMesh".
+When you create the retargeter from `IK_<yourVRM>`, UE defaults the target rig to that same source
+rig and bakes the VRoid rig and VRoid chain mapping into each op. Changing the Default Target
+dropdown afterward does not rewrite those ops, so the FK op still resolves "Spine" to `J_Bip_C_*`
+and fails to find those bones in the MetaHuman mesh ("could not find J_Bip_* in mesh …").
 
-**THE FIX (re-point each op's own IK Rig, or recreate clean):**
+**The fix (re-point each op's own IK Rig, or recreate clean):**
 - **Cleanest:** delete the RTG. Before recreating, set the project/editor up so the target resolves
   to the MetaHuman, OR immediately after Create, in EACH op's Details set its **IK Rig Asset** (FK
   Chains op, IK Chains op) to `IK_MetaHuman`, then use the chain panel's
@@ -133,11 +129,10 @@ find J_Bip_* in mesh SKM_MetaHumanCharacter_BodyMesh".
   set **Source Root**=`root` (or VRoid root), **Target Root**=`root`, **Target Pelvis**=`pelvis`.
 - After re-pointing, the "out of sync / J_Bip not found" warnings clear because each op now resolves
   chains against the MetaHuman rig.
-- Engine-confirmed button: the chain panel's auto-map menu has **Map All (Exact)** / **Map All
-  (Fuzzy)** / **Map Only Empty** / **Clear All Mappings** (SIKRetargetChainMapList.cpp). Exact match
-  works since both rigs use identical chain names.
+- The chain panel's auto-map menu has **Map All (Exact)** / **Map All (Fuzzy)** / **Map Only
+  Empty** / **Clear All Mappings**. Exact match works since both rigs use identical chain names.
 
-## GOTCHA: "missing target pelvis bone J_Bip_C_Hips" / "chain data out of sync" after creating the RTG
+## If you see "missing target pelvis bone J_Bip_C_Hips" / "chain data out of sync" after creating the RTG
 In practice the two IK rigs are usually fine, but the retargeter can have a stale VRoid bone
 (`J_Bip_C_Hips`) baked into its **Root Motion op**. Cause: when you
 right-click an IK Rig → Create IK Retargeter, UE defaults the **Target to the same rig as the Source**

@@ -182,9 +182,8 @@ The Meta object has a `SkeletonType` you set:
 | 2 | **Anim-node auto-trigger** | Assign a `VrmMetaObject` that has a mesh but an *empty* table to a VMC node: it auto-populates and notifies. |
 
 > Both wrap the edit in an undo transaction and mark the asset dirty, so **Ctrl+Z works and
-> the change saves** (fixed in the stability pass). They share one implementation, so messages
-> and behavior are identical from either entry point. (A third, content-browser right-click
-> entry existed in the code but was never registered, removed 2026-07-03.)
+> the change saves**. They share one implementation, so messages and behavior are identical
+> from either entry point.
 
 ### Failure modes (and what you see)
 
@@ -204,8 +203,8 @@ By default the VMC node applies each incoming rotation directly to the matching 
 the sender 1:1 on rigs whose bind pose matches the VMC reference (VRoid and Mixamo, both **T-pose**).
 MetaHuman and DAZ ship in **A-pose** with different bone-axis conventions, so the same incoming
 rotation lands their limbs at a different absolute angle: driving them directly with the VMC node
-misaligns, and no constant per-bone fixup can hold across the pose range (it drifts at far poses:
-see [`metahuman-alignment-findings.md`](metahuman-alignment-findings.md) for the full diagnosis).
+misaligns, and no constant per-bone fixup can hold across the pose range (it aligns near the
+calibration pose but drifts as the character moves away from it).
 
 **So don't put a VMC node on MetaHuman/DAZ at all.** Drive one T-pose rig with VMC and retarget it
 per-frame with the UE **IK Retargeter**, which is chain-aware and built for exactly this:
@@ -222,11 +221,7 @@ Scene"** checks an existing scene for common wiring mistakes. See
 [`ik-retargeter-pipeline.md`](ik-retargeter-pipeline.md) for the manual step-by-step.
 
 Validate with the [Debug panel's](#9-the-vmc-debug-panel) ghost readout (Rig = MetaHuman, ghost =
-the VMC-driven source) and check the dir-error stays low at both standing and sitting.
-
-> **History:** this fork previously shipped a "retarget basis correction" on the VMC node (a constant
-> per-bone rotation toward a canonical rig's bind pose). It aligned the calibration pose but drifted
-> at far poses, and has been **removed** in favor of the IK Retargeter pipeline above.
+the VMC-driven source) and confirm the direction error stays low at both standing and sitting.
 
 ### The face (MetaHuman): the VMC → LiveLink bridge ✦
 
@@ -501,8 +496,7 @@ bool IsVMCFaceLiveLinkActive(FName SubjectName);
 - **Default `0.0.0.0`** binds all interfaces (so remote senders can reach it). Use `127.0.0.1` to keep
   it local.
 - **Port in use:** if the port is already bound (another receiver, or an unclean shutdown), the OSC
-  server can't be created. You'll get no data. Free the port / change it, and check the log. (The
-  stability pass added a null-guard so this fails cleanly instead of crashing.)
+  server can't be created and you'll get no data. Free the port or change it, and check the log.
 - **PIE teardown:** servers are destroyed when PIE ends. They don't leak across sessions.
 
 ---

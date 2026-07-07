@@ -1,10 +1,9 @@
 # VMC → LiveLink ARKit face bridge
 
-Implements **Option A** of [`vmc-face-findings.md`](vmc-face-findings.md): the VMC blendshape
-stream (`/VMC/Ext/Blend/Val`) is republished as a **LiveLink subject with the ARKit schema**, so
-the MetaHuman template's stock **`ABP_MH_LiveLink` → ARKit mapping → RigLogic** stack consumes it
-unchanged. One capture app (e.g. XR Animator) now drives body *and* face. The template's face
-assets are never modified.
+This bridge republishes the VMC blendshape stream (`/VMC/Ext/Blend/Val`) as a **LiveLink subject
+with the ARKit schema**, so the MetaHuman template's stock **`ABP_MH_LiveLink` → ARKit mapping →
+RigLogic** stack consumes it unchanged. One capture app (for example XR Animator) drives body
+*and* face, and the template's face assets are never modified.
 
 ## Runtime pieces (`VRM4UCapture`)
 
@@ -52,4 +51,4 @@ no LiveLink dependency at all (lint detects LiveLink ABPs by struct *name*).
   (`Private/Tests/VrmVMCFaceLiveLinkTest.cpp`): schema shape (61, enum order, unique),
   PerfectSync pass-through + prefix strip, fallback fan-out, max-on-collision, ARKit keys never
   fan out, unknown keys ignored.
-- Final visual check (XR Animator → MetaHuman face in PIE) is manual, per usual.
+- The final visual check (XR Animator → MetaHuman face in PIE) is manual.

@@ -2,8 +2,8 @@
 
 Editor tooling that automates [ik-retargeter-pipeline.md](ik-retargeter-pipeline.md) /
 [ik-retargeter-asset-setup.md](ik-retargeter-asset-setup.md) end-to-end, and detects the
-misconfigurations we hit while building that pipeline by hand. Lives in `VRM4UCaptureEditor`
-(`VrmRetargetSetupUtil`, `VrmSceneLint`, `VrmRetargetSetupMenuExtension`).
+misconfigurations that commonly arise when building that pipeline by hand. Lives in
+`VRM4UCaptureEditor` (`VrmRetargetSetupUtil`, `VrmSceneLint`, `VrmRetargetSetupMenuExtension`).
 
 ## The wizard: "VRM4U: Auto-Setup VMC Retarget"
 
@@ -25,9 +25,9 @@ It is hidden for native VRM actors (those are VMC sources, not targets).
    Xsens, …), and the VRM chain builder when the target resolves as a VRM humanoid (incl. a DAZ
    with an AutoPopulate meta table, since its table is reused to pick the right bones).
 5. Creates `RTG_<src>_to_<tgt>_VRM4U`: rigs are assigned **before** `AddDefaultOps()`, so the
-   stale-per-op-IK-rig trap (ops baked against the wrong rig) is structurally impossible.
+   stale per-op IK-rig problem (ops baked against the wrong rig) cannot occur.
    Then `AutoMapChains(Exact)` and a **`VRM4U_AutoAligned`** target retarget pose via
-   `AutoAlignAllBones` (the Step-3.4 bind reconciliation, with "Default Pose" kept for rollback).
+   `AutoAlignAllBones` (the bind reconciliation from Step 3.4, with "Default Pose" kept for rollback).
 6. Sets the component's Anim Class to `VrmVMCRetargetAnimInstance` (transactional). At play
    time its auto-resolve wires SourceMeshComponent + Retargeter with zero Blueprint work.
 
@@ -59,12 +59,12 @@ finding count, with details in `LogVRM4UCaptureEditor`).
 
 | CheckId | Severity | Meaning |
 |---|---|---|
-| `VmcNodeOnNonVrmRig` | Error / Warning | A direct VMC anim node drives a rig whose own bones aren't VRM (meta-table-only rigs count as non-VRM on purpose). Severity is decided by MEASURING the bind arm elevation: A-pose bind (MetaHuman/DAZ) → Error, T-pose bind (Mixamo, our gold standard) → heads-up Warning only. |
+| `VmcNodeOnNonVrmRig` | Error / Warning | A direct VMC anim node drives a rig whose own bones aren't VRM (meta-table-only rigs count as non-VRM by design). Severity is decided by measuring the bind arm elevation: A-pose bind (MetaHuman/DAZ) → Error, T-pose bind (Mixamo, the reference case) → heads-up Warning only. |
 | `VmcNodeInPostProcess` | Error | A VMC node sits in a mesh asset's post-process AnimBP. |
 | `ZeroOffsetRetargetPose` | Error | An RTG targeting a level mesh has a zero-offset current target pose (arms ride ~45° low). |
 | `StalePerOpIKRig` | Error | An op resolves chains against a different rig than the asset target. |
 | `ChainMappingEmpty` / `LimbChainUnmapped` | Error | No/partial chain pairs on the best-mapped op. Name-agnostic: judged by mapping coverage, so hand-built `LeftShoulder`-style rigs don't false-positive. |
-| `ClavicleChainUnmapped` | Warning | No mapped clavicle/shoulder chain (arm raises stop ~50° short, measured 2026-07-02). |
+| `ClavicleChainUnmapped` | Warning | No mapped clavicle/shoulder chain (arm raises stop ~50° short). |
 | `FingerChainsUnmapped` / `…PartiallyMapped` | Warning | Fists/hand tracking won't (fully) transfer. |
 | `RetargetInstanceNotUsed` | Warning | An RTG exists for the mesh but the component's anim class isn't `VrmVMCRetargetAnimInstance`. |
 | `FaceNotDriven` | Warning | A MetaHuman face rides on a VMC-driven body but its anim class consumes no LiveLink subject, so the face stays frozen while the body moves. |
@@ -73,9 +73,9 @@ finding count, with details in `LogVRM4UCaptureEditor`).
 
 ## Runtime visibility
 
-`UVrmVMCRetargetAnimInstance` auto-resolve now reports failure instead of silently
-T-posing: an on-screen orange message (non-shipping builds) + log warning naming exactly
-what could not be resolved (no matching RTG asset vs. no live source rig).
+`UVrmVMCRetargetAnimInstance` auto-resolve reports failure instead of silently
+T-posing: an on-screen orange message (non-shipping builds) plus a log warning naming exactly
+what could not be resolved (no matching RTG asset, or no live source rig).
 
 ## Known limits
 

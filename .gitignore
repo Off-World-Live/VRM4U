@@ -26,6 +26,9 @@
 #*.a
 #*.lib
 
+# Internal engineering notes — local only, never published
+/docs/internal/
+
 # Executables
 *.exe
 *.out

@@ -14,7 +14,7 @@ below). A distorted source pose retargets the distortion too, so confirm the sou
 correct first.
 
 > **Live tuning gotchas:**
-> - **The source rig must be the clean gold-standard pose.** No extra pose-modifying nodes between
+> - **The source rig must show the clean, correct pose.** No extra pose-modifying nodes between
 >   the VMC node and Output Pose, or the retargeter transfers the distortion too.
 > - **Limp forearm/hand that doesn't respond to FK Rotation Mode changes** = the bones aren't in the
 >   retargeted chain. Check the arm chain's **End bone** is the hand on BOTH rigs (`J_Bip_L_Hand` /
@@ -24,19 +24,18 @@ correct first.
 > **Click-by-click for the assets (steps 1–3 below):** see
 > [ik-retargeter-asset-setup.md](ik-retargeter-asset-setup.md).
 
-## Why this instead of the VMC swing correction
+## Why the IK Retargeter, not a per-bone correction
 
-For MetaHuman/DAZ, a constant per-bone correction is provably insufficient: right at the
-calibration pose, wrong everywhere else (measured ~88–107° on arms when sitting. See
-[metahuman-alignment-findings.md](metahuman-alignment-findings.md)). The fix is to stop correcting on
-the target and let UE's per-frame, chain-aware retargeter do the cross-rig conversion. (The VMC
-node's interim "retarget basis correction" was removed 2026-07-03 for this reason.)
+For MetaHuman/DAZ, a constant per-bone correction cannot hold: it can be tuned to match one
+calibration pose, but the error grows as the character moves away from it (on the order of 90°+
+at the arms when sitting). The IK Retargeter instead does a per-frame, chain-aware conversion
+between the two skeletons, which stays accurate across the full pose range.
 
 ## Architecture
 
 ```
 XR Animator ──VMC/OSC──> [Mixamo PROXY SkeletalMeshComponent]
-                          AnimBP runs FAnimNode_VrmVMC (the gold-standard path, untouched)
+                          AnimBP runs FAnimNode_VrmVMC (the known-good VMC path)
                                           │  pose read each frame
                                           ▼
                           [MetaHuman body AnimBP: "Retarget Pose From Mesh" node]
@@ -49,9 +48,9 @@ XR Animator ──VMC/OSC──> [Mixamo PROXY SkeletalMeshComponent]
 The Mixamo proxy can stay hidden (`SetVisibility(false)` / `bHiddenInGame`). It still
 ticks and evaluates, which is all the retargeter needs.
 
-## Engine node reference (UE 5.6, verified from engine source)
+## Engine node reference (UE 5.6)
 
-`FAnimNode_RetargetPoseFromMesh`: `Engine/Plugins/Animation/IKRig/Source/IKRig/Public/AnimNodes/AnimNode_RetargetPoseFromMesh.h` (verified UE 5.6):
+`FAnimNode_RetargetPoseFromMesh` (`Engine/Plugins/Animation/IKRig/Source/IKRig/Public/AnimNodes/AnimNode_RetargetPoseFromMesh.h`):
 
 - `RetargetFrom` (`ERetargetSourceMode`, default `ParentSkeletalMeshComponent`): **the source
   selector in 5.6.** Set it to `CustomSkeletalMeshComponent` to use an explicit `SourceMeshComponent`,
@@ -69,9 +68,9 @@ ticks and evaluates, which is all the retargeter needs.
 
 ## Walkthrough
 
-### Step 1: Mixamo proxy driven by VMC (reuse the gold standard)
+### Step 1: Mixamo proxy driven by VMC (reuse the known-good source)
 1. Place a Mixamo skeletal mesh in the level (or as a component on your character actor).
-   This is the same rig that is the §5 ghost gold standard.
+   This is the same rig you compare against in the Debug panel's ghost readout (guide §9).
 2. Give it an AnimBP whose graph runs **VRM VMC** (`FAnimNode_VrmVMC`) → Output Pose.
 3. Assign the Mixamo `UVrmMetaObject` to the node's **Vrm Meta Object** pin (non-VRM rigs do
    NOT auto-resolve a meta, so assign it explicitly).
@@ -125,19 +124,18 @@ node has no `CustomScale`).
 
 ### Step 7: Validate (don't skip: this is the whole point)
 Run the **stand → sit error-curve test**:
-1. Ghost compare: live MetaHuman vs. ghost Mixamo, same VMC stream (debug panel §5).
+1. Ghost compare: live MetaHuman vs. ghost Mixamo, same VMC stream (Debug panel, guide §9).
 2. Neutral standing → record per-bone direction error (expect ~0).
 3. Slowly sit and watch worst-bone error.
-4. **Pass = the error stays flat across the range** (contrast: the swing correction grew to
-   ~88–107° on arms). Use a fixed XR Animator source pose for comparable captures.
+4. **Pass = the error stays flat across the range.** Use a fixed XR Animator source pose for
+   comparable captures.
 
 ## Open risks / things to watch
 - **Retarget pose quality** dominates results. If arms/spine look off everywhere (not just
   far from calibration), the target retarget pose in Step 4 is wrong. Fix that first.
 - **Mixamo IK Rig chains** must be complete. A missing chain = that limb won't retarget.
-- **Twist/forearm roll**: the IK Retargeter handles this far better than the swing correction,
-  but if residual twist remains, it's tuned in the retargeter chain settings, not in VMC roll
-  offsets.
+- **Twist/forearm roll**: the IK Retargeter handles this well. If residual twist remains, tune
+  it in the retargeter chain settings.
 - **DAZ**: same pipeline, different IK Rig + RTG asset (`RTG_Mixamo_To_DAZ`).
 
 ## Automating this (the wizard)
