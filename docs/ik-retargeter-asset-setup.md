@@ -159,14 +159,6 @@ doesn't break the visual result.
 > Auto-Align on it. "Default Pose" stays untouched, so you can roll back by picking it in the RTG
 > editor's pose dropdown.
 
-## Verify the assets headlessly (no editor clicking)
-`Content/Python/VRM4U_DumpIKRetargetChains.py` dumps both IK rigs (root + every chain's start/end
-bone) and the RTG's op stack (per-op target rig, per-op chain mapping, full op settings incl. FK
-RotationMode) via `UnrealEditor-Cmd -run=pythonscript` — run command in the script header, then grep
-the log for `CHAINDUMP`. If the dump is clean (arm chains end at the hands on both rigs, all chains
-mapped) but a limb is still limp, the problem is the **source pose or runtime wiring**, not these
-assets.
-
 ## If something looks off
 - **A whole limb doesn't move** → that chain is missing or unmapped (Step 1.4 / Step 3.3).
 - **Pose is right standing but wrong elsewhere** → that's the old constant-correction failure; the
