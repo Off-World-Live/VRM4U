@@ -39,7 +39,7 @@ void UAnimGraphNode_VrmVMC::ValidateAnimNodePostCompile(FCompilerResultsLog& Mes
 	else
 	{
 		// GetTargetSkeleton() can be null for a freshly created / duplicated /
-		// reimporting AnimBP; dereferencing it unconditionally crashes the editor
+		// reimporting AnimBP. Dereferencing it unconditionally crashes the editor
 		// at compile. Cache and guard.
 		USkeleton* TargetSkeleton = CompiledClass ? CompiledClass->GetTargetSkeleton() : nullptr;
 		if (Node.VrmMetaObject->SkeletalMesh && TargetSkeleton)
@@ -197,7 +197,6 @@ void UAnimGraphNode_VrmVMC::PostEditChangeProperty(FPropertyChangedEvent& Proper
 			// being assigned to the node right now.
 			if (Node.VrmMetaObject->humanoidBoneTable.Num() == 0)
 			{
-				// We need a non-const pointer to modify the meta object
 				UVrmMetaObject* MutableMetaObject = const_cast<UVrmMetaObject*>(Node.VrmMetaObject);
 				UAutoPopulateVrmMeta::AutoPopulateWithUi(MutableMetaObject, /*bShowAssignReminder=*/false);
 			}

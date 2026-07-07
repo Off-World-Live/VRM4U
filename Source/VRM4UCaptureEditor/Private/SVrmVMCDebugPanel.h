@@ -104,7 +104,7 @@ private:
 
 	// Clipboard preset format. Schema version field on the root so future
 	// changes can migrate cleanly. Euler in degrees, only non-default state
-	// is serialized. See header comment for shape.
+	// is serialized.
 	FString SerializeCurrentState() const;
 	bool ApplyStateFromJson(const FString& Json);
 

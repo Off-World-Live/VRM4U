@@ -19,7 +19,7 @@ class UAnimInstance;
  *     are needed.
  *
  * The whole path is optional-by-construction: with the engine's LiveLink plugin disabled
- * the bridge logs one warning and does nothing — the rest of VRM4U is unaffected.
+ * the bridge logs one warning and does nothing. The rest of VRM4U is unaffected.
  * "VRM4U: Auto-Setup VMC Face (LiveLink)" adds + configures this component.
  */
 UCLASS(ClassGroup = (VRM4U), meta = (BlueprintSpawnableComponent, DisplayName = "VRM4U VMC Face LiveLink"),
@@ -36,11 +36,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Face")
 	FName SubjectName = TEXT("VMCFace");
 
-	/** VMC OSC endpoint to read curves from — match the body's VMC node settings. */
+	/** VMC OSC endpoint to read curves from, matching the body's VMC node settings. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Face")
 	FString ServerAddress = TEXT("0.0.0.0");
 
-	/** VMC OSC port — match the body's VMC node settings. */
+	/** VMC OSC port, matching the body's VMC node settings. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Face")
 	int32 Port = 39539;
 
@@ -49,7 +49,7 @@ public:
 	bool bAutoStart = true;
 
 	/** On BeginPlay, set SubjectName on the face anim instance's FLiveLinkSubjectName
-	 *  variable (retries briefly — anim instances can spawn a few frames late). Disable
+	 *  variable (retries briefly, since anim instances can spawn a few frames late). Disable
 	 *  if you wire the subject in your own anim blueprint. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Face")
 	bool bBindFaceAnimInstanceSubject = true;
@@ -89,11 +89,11 @@ private:
 	// Returns true when binding is finished (bound, or determined impossible).
 	bool TryBindFaceSubject();
 
-	// Default SubjectName value; a component still carrying this in BeginPlay gets a
+	// Default SubjectName value. A component still carrying this in BeginPlay gets a
 	// per-actor-unique name so two default-configured actors don't share one subject.
 	static const FName DefaultSubjectName;
 
-	// Anim instance the subject was last bound into; used to detect a runtime
+	// Anim instance the subject was last bound into. Used to detect a runtime
 	// anim-instance swap (SetAnimInstanceClass / mesh swap) and re-arm the bind.
 	TWeakObjectPtr<UAnimInstance> BoundAnimInstance;
 

@@ -58,8 +58,8 @@ class VRM4U_API UVrmVMCRetargetAnimInstance : public UAnimInstance
 public:
 	UVrmVMCRetargetAnimInstance(const FObjectInitializer& ObjectInitializer);
 
-	/** The rig to retarget FROM — the live-driven source (e.g. your VRM/VRoid template). It must
-	 *  be animated and tick BEFORE this mesh (see bAddSourceTickPrerequisite). */
+	/** The rig to retarget FROM: the live-driven source (e.g. your VRM/VRoid template). Must be
+	 *  animated and tick BEFORE this mesh (see bAddSourceTickPrerequisite). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Retarget")
 	TObjectPtr<USkeletalMeshComponent> SourceMeshComponent = nullptr;
 
@@ -73,18 +73,15 @@ public:
 
 	/** When Retargeter / SourceMeshComponent are unset at play time, resolve them automatically:
 	 *  pick the IK Retargeter asset whose TARGET rig matches this mesh (preview mesh or pelvis
-	 *  bone), then the skeletal mesh component in the world matching that retargeter's SOURCE rig.
-	 *  This lets the plain C++ class drive a mesh with zero Blueprint wiring: set the mesh's Anim
-	 *  Class to this class and press play. Explicitly-set properties always win. */
+	 *  bone), then the world's skeletal mesh matching that retargeter's SOURCE rig. Lets the class
+	 *  drive a mesh with zero Blueprint wiring. Explicitly-set properties always win. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Retarget")
 	bool bAutoResolveSourceAndRetargeter = true;
 
 	/** Editor-build debug: while playing (PIE), periodically append the SOURCE component pose and
-	 *  this mesh's FINAL pose (i.e. after any post-process AnimBP) to
-	 *  Saved/VRM4U/PoseCapture_<time>.txt for offline replay analysis
-	 *  (VRM4U.VMC.RetargetPoseReplay.CapturedPose). No-op in packaged builds.
-	 *  Default OFF: it writes ~4MB/min per instance while enabled — turn it on per-instance
-	 *  when you want to (re)capture a session for the replay/fidelity tests. */
+	 *  this mesh's FINAL pose (after any post-process AnimBP) to Saved/VRM4U/PoseCapture_<time>.txt
+	 *  for offline replay analysis (VRM4U.VMC.RetargetPoseReplay.CapturedPose). No-op in packaged
+	 *  builds. Default OFF: writes ~4MB/min per instance while enabled. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U|VMC Retarget|Debug")
 	bool bDebugCapturePoses = false;
 

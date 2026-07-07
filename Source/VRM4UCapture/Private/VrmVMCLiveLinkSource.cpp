@@ -18,7 +18,7 @@ namespace VrmVMCFaceLiveLink
 {
 	const TArray<FName>& GetARKitPropertyNames()
 	{
-		// EARFaceBlendShape order (ARTrackable.h) — the exact names + order Epic's Live Link
+		// EARFaceBlendShape order (ARTrackable.h): the exact names + order Epic's Live Link
 		// Face source publishes, so the MetaHuman ARKit mapping assets match without remap.
 		static const TArray<FName> Names = {
 			// Left eye

@@ -336,7 +336,7 @@ bool UAutoPopulateVrmMeta::PopulateForVRM(UVrmMetaObject* InMetaObject, USkeleta
 	};
 
 	// VRM keeps a bespoke two-pass rather than ApplyBoneMap: the prefixed pass is
-	// all-or-nothing — if it maps fewer than half the critical bones, the whole
+	// all-or-nothing. If it maps fewer than half the critical bones, the whole
 	// result is discarded and retried with plain then "vrm_" names, which per-bone
 	// candidate ordering cannot reproduce.
 	int32 TotalMapped = 0;
@@ -740,7 +740,6 @@ bool UAutoPopulateVrmMeta::ApplyCustomBoneOverrides(UVrmMetaObject* InMetaObject
 {
 	if (!InMetaObject || !InSkeletalMesh || InMetaObject->CustomBoneOverrides.Num() == 0)
 	{
-		// No overrides to apply
 		return false;
 	}
 
@@ -761,11 +760,9 @@ bool UAutoPopulateVrmMeta::ApplyCustomBoneOverrides(UVrmMetaObject* InMetaObject
 			continue;
 		}
 
-		// Check if the target bone exists in the skeleton
 		int32 BoneIndex = RefSkeleton.FindBoneIndex(*Override.ModelBoneName);
 		if (BoneIndex != INDEX_NONE)
 		{
-			// Add or update the bone mapping
 			InMetaObject->humanoidBoneTable.Add(Override.HumanoidBoneName, Override.ModelBoneName);
 			UE_LOG(LogTemp, Log, TEXT("Applied custom bone override: %s -> %s"),
 					*Override.HumanoidBoneName, *Override.ModelBoneName);
@@ -809,9 +806,8 @@ FVrmAutoPopulateUiResult UAutoPopulateVrmMeta::AutoPopulateWithUi(UVrmMetaObject
 		return Result;
 	}
 
-	// Resolve the display type name: an explicit SkeletonType on the meta wins;
-	// Auto falls back to detection (and fails loudly on Unknown - the populate
-	// itself would also fail, but this names the actual problem).
+	// Resolve the display type name: an explicit SkeletonType on the meta wins, Auto falls back
+	// to detection (and fails loudly on Unknown, which names the actual problem the populate hits).
 	bool bAutoDetected = false;
 	switch (MetaObject->SkeletonType)
 	{
@@ -863,8 +859,8 @@ FVrmAutoPopulateUiResult UAutoPopulateVrmMeta::AutoPopulateWithUi(UVrmMetaObject
 			Result.MappedBones, FText::FromString(Result.TypeName));
 		if (bShowAssignReminder)
 		{
-			// The easy-to-miss next step: a populated asset does nothing until it
-			// is assigned to the VRM VMC node (auto-search finds VRM meshes only).
+			// A populated asset does nothing until the user assigns it to the VRM VMC
+			// node (auto-search finds VRM meshes only), so the toast points them there.
 			Message = FText::Format(
 				NSLOCTEXT("AutoPopulateVrmMeta", "PopulateAssignReminder",
 					"{0}\nNext: assign this asset to your VRM VMC node's 'Vrm Meta Object' (auto-search finds VRM meshes only), then restart PIE."),

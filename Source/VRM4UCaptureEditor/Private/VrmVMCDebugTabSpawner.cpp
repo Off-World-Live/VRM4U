@@ -37,8 +37,7 @@ void FVrmVMCDebugTabSpawner::Register()
 		return;
 	}
 
-	// Store the handle so Unregister can remove it; a re-registered binding is
-	// what produces duplicate menu groups / tabs on module reload.
+	// Store the handle so Unregister can remove it.
 	PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddStatic(&FVrmVMCDebugTabSpawner::RegisterDeferred);
 }
 

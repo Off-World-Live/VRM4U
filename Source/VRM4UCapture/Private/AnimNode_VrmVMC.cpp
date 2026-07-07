@@ -133,7 +133,7 @@ void FAnimNode_VrmVMC::Initialize_AnyThread(const FAnimationInitializeContext& C
 		       (VrmMetaObject_Internal != nullptr) ? TEXT("true") : TEXT("false"));
 
 		// Fires once per init (not per frame). If no humanoid table resolved, the
-		// node drives nothing — name the exact component so the user can find it.
+		// node drives nothing; name the exact component so the user can find it.
 		if (VrmMetaObject_Internal == nullptr)
 		{
 			UE_LOG(LogTemp, Warning,
@@ -235,7 +235,7 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 
 	// Refresh the mask/override snapshot only when a Blueprint mutator changed
 	// it, rather than copying both state maps every eval. The cached copies are
-	// read on this worker thread only; the maps and dirty flag live under lock.
+	// read on this worker thread only. The maps and dirty flag live under lock.
 	{
 		FScopeLock Lock(BoneStateLock.Get());
 		if (bStateSnapshotDirty)
@@ -391,8 +391,8 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 					if (bUseRemoteCenterPos)
 					{
 						FVector v = f.Transform.GetLocation() * ModelRelativeScale;
-						// Fold root motion into hips only when hips is the skeleton root;
-						// otherwise it drives the separate root bone (index 0) below.
+						// Fold root motion into hips only when hips is the skeleton root.
+						// Otherwise it drives the separate root bone (index 0) below.
 						f.Transform.SetTranslation(index == 0 ? v + VmcRootTranslation : v);
 					}
 					else
@@ -466,7 +466,7 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 				boneIndexTable.Add(index);
 
 				// Rigs whose hips is not the skeleton root (Mixamo/Mannequin-style)
-				// carry locomotion on a separate root bone; drive it from the stream.
+				// carry locomotion on a separate root bone. Drive it from the stream.
 				if (bIsHumanoidHips && index != 0 && bHasVmcRoot)
 				{
 					const FCompactPoseBoneIndex RootCompactIndex =
@@ -493,7 +493,7 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 				}
 			}
 
-			// bone hierarchy - Convert parent bone indices to compact indices
+			// bone hierarchy
 			for (int i = 1; i < tmpOutTransform.Num(); ++i)
 			{
 				int parentBoneIndex = RefSkeleton.GetParentIndex(boneIndexTable[i]);
@@ -507,7 +507,6 @@ TMap<FString, FTransform>& BoneTrans = VMCData.BoneData;
 					}
 					if (parentBoneIndex < 0) break;
 
-					// Convert parent bone index to compact index before creating FBoneTransform
 					FCompactPoseBoneIndex ParentCompactIndex = RequiredBones.GetCompactPoseIndexFromSkeletonIndex(
 						parentBoneIndex);
 					if (ParentCompactIndex != FCompactPoseBoneIndex(INDEX_NONE))

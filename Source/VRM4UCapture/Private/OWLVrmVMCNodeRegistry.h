@@ -18,7 +18,7 @@ struct FOWLVrmVMCRegistryEntry
 {
 	TWeakObjectPtr<UAnimInstance> WeakInstance;
 	// Weak ref to the component this entry was registered against. The map is
-	// keyed by a raw component pointer that GC never nulls; this weak ref lets
+	// keyed by a raw component pointer that GC never nulls. This weak ref lets
 	// Find() reject a stale/reused key (an address recycled by a different
 	// object) instead of returning an entry bound to a dead component.
 	TWeakObjectPtr<USkeletalMeshComponent> WeakComponent;
@@ -53,9 +53,9 @@ class FOWLVrmVMCNodeRegistry
 {
 public:
 	// Module lifetime hooks. Initialize binds a pre-GC sweep that drops entries
-	// whose component has been destroyed; Shutdown unbinds it. This is belt-and-
-	// suspenders on top of Find()'s per-lookup stale-key rejection: it bounds the
-	// map size even for components that are never looked up again.
+	// whose component has been destroyed. Shutdown unbinds it. This backs up
+	// Find()'s per-lookup stale-key rejection: it bounds the map size even for
+	// components that are never looked up again.
 	static void Initialize();
 	static void Shutdown();
 

@@ -102,7 +102,7 @@ public:
 	// -- VMC -> LiveLink ARKit face bridge (see VrmVMCFaceLiveLink.h) --
 	// Game-thread only. Publishes the endpoint's blendshape curves as a LiveLink
 	// basic-role subject with the ARKit-52(+9) schema. Returns false (with one log
-	// line) when the engine's LiveLink plugin is disabled — everything else in
+	// line) when the engine's LiveLink plugin is disabled. Everything else in
 	// VRM4U works without it. Creates the VMC server if it does not exist yet.
 	UFUNCTION(BlueprintCallable, Category = "VRM4U|VMC")
 	bool StartVMCFaceLiveLink(FName SubjectName, const FString ServerAddress, int Port);

@@ -37,7 +37,7 @@ namespace
 
 	// The component the wizard should target on this actor: a skeletal mesh that is NOT a
 	// VRM humanoid (those are sources). MetaHuman actors carry several skeletal meshes
-	// (body, face, ...); prefer the one with the most bones below a pelvis-style root -
+	// (body, face, ...), so prefer the one with the most bones below a pelvis-style root,
 	// in practice the body. Simple tie-break: most bones wins among non-VRM meshes.
 	USkeletalMeshComponent* FindTargetComponent(AActor* Actor)
 	{
@@ -57,7 +57,7 @@ namespace
 			{
 				continue;
 			}
-			// A body rig has legs; face/groom rigs do not. Require a thigh-like bone so we
+			// A body rig has legs. Face/groom rigs do not. Require a thigh-like bone so we
 			// never pick the MetaHuman face mesh (which has more bones than the body).
 			const FReferenceSkeleton& Ref = Mesh->GetRefSkeleton();
 			const bool bHasLegs =
@@ -81,7 +81,7 @@ namespace
 	}
 
 	// Both the wizard and the lint write their real content (per-step log,
-	// per-finding fix hints) to LogVRM4UCaptureEditor; give every toast a direct
+	// per-finding fix hints) to LogVRM4UCaptureEditor. Give every toast a direct
 	// link there instead of asking the user to find the Output Log themselves.
 	void AddOpenOutputLogHyperlink(FNotificationInfo& Info)
 	{
@@ -98,7 +98,7 @@ namespace
 		if (Target == nullptr)
 		{
 			// The menu entry is hidden when no target resolves, but the selection can
-			// change between menu build and click - fail loudly, not silently.
+			// change between menu build and click. Fail loudly, not silently.
 			FNotificationInfo Info(FText::Format(
 				LOCTEXT("SetupNoTargetFmt", "VMC retarget setup: no suitable skeletal mesh found on '{0}' (needs a non-VRM body rig with legs)."),
 				FText::FromString(Actor->GetActorLabel())));
@@ -114,7 +114,7 @@ namespace
 		FVrmRetargetSetupReport Report;
 		{
 			// The wizard creates IK rigs, the retargeter, and aligns poses
-			// synchronously; without this the editor just freezes until the toast.
+			// synchronously. Without this the editor just freezes until the toast.
 			FScopedSlowTask SlowTask(1.0f, FText::Format(
 				LOCTEXT("SetupSlowTaskFmt", "Setting up VMC retarget for '{0}' (IK rigs, retargeter, pose alignment)..."),
 				FText::FromString(Actor->GetActorLabel())));
@@ -123,7 +123,7 @@ namespace
 			Report = UVrmRetargetSetupUtil::SetupRetargetForComponent(Target);
 		}
 
-		// The full step log has already gone to LogVRM4UCaptureEditor; notify with the tail.
+		// The full step log has already gone to LogVRM4UCaptureEditor. Notify with the tail.
 		const FString Summary = Report.Messages.Num() > 0 ? Report.Messages.Last() : FString(TEXT("See the Output Log for details."));
 		FNotificationInfo Info(FText::Format(
 			Report.bSuccess

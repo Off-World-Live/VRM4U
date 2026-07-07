@@ -42,7 +42,7 @@ void FVrmVMCRetargetAnimInstanceProxy::UpdateAnimationNode(const FAnimationUpdat
 	EnsureNode();
 	if (Node_Retarget.Get())
 	{
-		// Drives DeltaTime/RelevancyWeight into the node; without it CacheBones/Evaluate run on stale state.
+		// Drives DeltaTime/RelevancyWeight into the node. Without it CacheBones/Evaluate run on stale state.
 		Node_Retarget->Update_AnyThread(InContext);
 	}
 }
@@ -83,7 +83,7 @@ bool FVrmVMCRetargetAnimInstanceProxy::Evaluate(FPoseContext& Output)
 		return true;
 	}
 
-	// Nothing wired yet — hold the reference pose rather than leaving the pose uninitialized.
+	// Nothing wired yet: hold the reference pose rather than leaving it uninitialized.
 	Output.ResetToRefPose();
 	return true;
 }
@@ -176,7 +176,7 @@ void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
 	}
 	LastAutoResolveTimeSeconds = Now;
 	// Back off on repeated failure so an unresolved instance doesn't rescan the whole
-	// asset registry + world every second forever; reset to the fast interval once resolved.
+	// asset registry + world every second forever. Reset to the fast interval once resolved.
 	AutoResolveRetryIntervalSeconds = FMath::Min(AutoResolveRetryIntervalSeconds * 2.0, 15.0);
 
 	const FReferenceSkeleton& TargetRef = Target->GetSkeletalMeshAsset()->GetRefSkeleton();
@@ -276,9 +276,9 @@ void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
 	{
 		AutoResolveRetryIntervalSeconds = 1.0;
 	}
-	// Still unresolved: say so where the user is actually looking. Without this the mesh
-	// just T-poses silently and the cause (missing RTG asset vs missing source rig in the
-	// level) is invisible outside the log.
+	// Still unresolved: say so where the user is looking. Otherwise the mesh just T-poses
+	// silently and the cause (missing RTG asset vs missing source rig in the level) is
+	// invisible outside the log.
 	else
 	{
 		const FString Missing = (Retargeter == nullptr && SourceMeshComponent == nullptr)
@@ -286,7 +286,7 @@ void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
 			: (Retargeter == nullptr
 				? TEXT("no IK Retargeter asset matches this mesh (create one, or run VRM4U: Auto-Setup VMC Retarget)")
 				: TEXT("no live source rig matching the retargeter's source IK rig found in this level"));
-		// The resolve retries on a backoff; a persistent failure only needs an occasional
+		// The resolve retries on a backoff, so a persistent failure only needs an occasional
 		// log line (the keyed on-screen message below already refreshes continuously).
 		if (Now - LastResolveFailLogTimeSeconds > 10.0)
 		{
@@ -310,7 +310,7 @@ void UVrmVMCRetargetAnimInstance::AutoResolveSourceAndRetargeter()
 // Format (space-separated, one line per rig):
 //   VRMCAP HDR <rig> <meshName> <boneCount> <boneName>*N
 //   VRMCAP POSE <timeSeconds> <rig> <boneCount> (<px py pz qx qy qz qw>)*N
-// Transforms are the component-space transforms in the mesh's reference-skeleton bone order —
+// Transforms are the component-space transforms in the mesh's reference-skeleton bone order,
 // the same space/order FIKRetargetProcessor consumes/produces, so a capture replays directly.
 void UVrmVMCRetargetAnimInstance::CapturePosesForDebug()
 {
@@ -353,7 +353,7 @@ void UVrmVMCRetargetAnimInstance::CapturePosesForDebug()
 	if (DebugCaptureFilePath.IsEmpty())
 	{
 		const FString CaptureDir = FPaths::ProjectSavedDir() / TEXT("VRM4U");
-		IFileManager::Get().MakeDirectory(*CaptureDir, /*Tree =*/ true); // SaveStringToFile won't
+		IFileManager::Get().MakeDirectory(*CaptureDir, /*Tree =*/ true); // SaveStringToFile won't create it
 		DebugCaptureFilePath = CaptureDir /
 			FString::Printf(TEXT("PoseCapture_%s.txt"), *FDateTime::Now().ToString());
 		for (const auto& RigComp : { TPair<const TCHAR*, USkeletalMeshComponent*>(TEXT("source"), Source),

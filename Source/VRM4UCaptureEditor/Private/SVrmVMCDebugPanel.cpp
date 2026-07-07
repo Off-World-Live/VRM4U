@@ -409,7 +409,7 @@ bool SVrmVMCDebugPanel::FastTick(float DeltaTime)
 	ApplyRowVisibilityFilters();
 
 	// Live alignment-error readout vs the optional ghost rig. Computed at the
-	// fast-tick rate and cached; GetCompareSummaryText() just returns the cache.
+	// fast-tick rate and cached. GetCompareSummaryText() just returns the cache.
 	// Read-only and silent (no logging) so it can run every tick during tuning.
 	{
 		USkeletalMeshComponent* Target = GetSelectedRig();
@@ -568,7 +568,7 @@ void SVrmVMCDebugPanel::RefreshRigList()
 	LastRigSnapshot = CurrentSet;
 
 	// Remember the current Rig + Ghost by display NAME before rebuilding. PIE
-	// restarts recreate the actors, so the old pointers die — but matching by
+	// restarts recreate the actors, so the old pointers die, but matching by
 	// name keeps the same rig selected across restarts (no manual re-picking).
 	const FString PrevRigName =
 		(SelectedRig.IsValid() && SelectedRig->Get() != nullptr) ? GetRigDisplayName(SelectedRig->Get()) : FString();
@@ -598,7 +598,7 @@ void SVrmVMCDebugPanel::RefreshRigList()
 	const TSharedPtr<FRigOption> RigMatch = FindByName(PrevRigName);
 	SelectedRig = RigMatch.IsValid() ? RigMatch : (RigOptions.Num() > 0 ? RigOptions[0] : nullptr);
 
-	// Ghost is optional — keep it by name, but don't auto-select a fallback.
+	// Ghost is optional: keep it by name, but don't auto-select a fallback.
 	SelectedReference = FindByName(PrevRefName);
 
 	if (RigCombo.IsValid())
@@ -1100,7 +1100,7 @@ void SVrmVMCDebugPanel::ParseServerAddress(const FString& Formatted, FString& Ou
 
 USkeletalMeshComponent* SVrmVMCDebugPanel::GetSelectedRig() const
 {
-	// .Get() returns null if the rig was GC'd since selection — callers must
+	// .Get() returns null if the rig was GC'd since selection; callers must
 	// null-check (RebuildBoneRows/RebuildCurveRows/footer/SlowTick all do).
 	return SelectedRig.IsValid() ? SelectedRig->Get() : nullptr;
 }

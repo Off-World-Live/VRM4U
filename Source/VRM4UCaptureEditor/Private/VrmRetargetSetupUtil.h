@@ -51,7 +51,7 @@ struct FVrmRetargetSetupReport
  * failure mode cannot occur.
  *
  * All entry points are static and BlueprintCallable, so they are reachable from editor
- * Python for headless validation. UE 5.6+ only; earlier engines get a failure report.
+ * Python for headless validation. UE 5.6+ only. Earlier engines get a failure report.
  */
 UCLASS()
 class VRM4UCAPTUREEDITOR_API UVrmRetargetSetupUtil : public UBlueprintFunctionLibrary
@@ -60,8 +60,8 @@ class VRM4UCAPTUREEDITOR_API UVrmRetargetSetupUtil : public UBlueprintFunctionLi
 
 public:
 
-	/** Create (or reuse) both IK rigs + the retargeter for SourceVrmMesh -> TargetMesh.
-	 *  AssetFolder optional; defaults to the target mesh's folder (or /Game/VRM4U/Retarget
+	/** Create (or reuse) both IK rigs plus the retargeter for SourceVrmMesh to TargetMesh.
+	 *  AssetFolder optional, defaults to the target mesh's folder (or /Game/VRM4U/Retarget
 	 *  when the target lives outside /Game). Creates nothing that already exists and is valid. */
 	UFUNCTION(BlueprintCallable, Category = "VRM4U|Retarget Setup")
 	static FVrmRetargetSetupReport SetupRetarget(USkeletalMesh* SourceVrmMesh, USkeletalMesh* TargetMesh, const FString& AssetFolder);
@@ -96,8 +96,8 @@ public:
 	static bool IsVrmHumanoidMesh(USkeletalMesh* Mesh);
 
 	/** True only when the mesh's OWN bone names are VRM humanoid (humanoid-renamed or
-	 *  J_Bip). A DAZ/MetaHuman that merely has an AutoPopulate meta table is NOT native —
-	 *  the direct VMC node path is broken for those; they are retarget targets. */
+	 *  J_Bip). A DAZ/MetaHuman that merely has an AutoPopulate meta table is NOT native.
+	 *  The direct VMC node path is broken for those, so they are retarget targets. */
 	UFUNCTION(BlueprintCallable, Category = "VRM4U|Retarget Setup")
 	static bool IsNativeVrmHumanoidMesh(USkeletalMesh* Mesh);
 

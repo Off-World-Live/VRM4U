@@ -10,9 +10,9 @@
 #include "Retargeter/IKRetargeter.h"
 #include "UObject/Package.h"
 
-// These are pure object-wiring tests for UVrmVMCRetargetAnimInstance — no world, no PIE.
-// They cover defaults and SetRetargetSource(). The runtime retarget itself (proxy evaluation,
-// tick ordering vs the live source) is still validated in PIE; see docs/ik-retargeter-pipeline.md.
+// Pure object-wiring tests for UVrmVMCRetargetAnimInstance (no world, no PIE): defaults and
+// SetRetargetSource(). The runtime retarget itself (proxy evaluation, tick ordering vs the live
+// source) is validated in PIE. See docs/ik-retargeter-pipeline.md.
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVrmVMCRetargetAnimInstanceDefaultsTest,
 	"VRM4U.VMC.RetargetAnimInstance.Defaults",

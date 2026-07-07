@@ -20,8 +20,8 @@
 
 namespace
 {
-	// UE 5.7 removed FIKRetargetProcessor::ScaleSourcePose; source scaling now happens inside
-	// RunRetargeter. Only UE 5.6 needs the explicit pre-scale before RunRetargeter.
+	// UE 5.7 removed FIKRetargetProcessor::ScaleSourcePose. Source scaling now happens inside
+	// RunRetargeter, so only UE 5.6 needs the explicit pre-scale.
 	FORCEINLINE void ScaleSourcePoseCompat(FIKRetargetProcessor& Processor, TArray<FTransform>& InOutSourcePose)
 	{
 #if UE_VERSION_OLDER_THAN(5,7,0)
@@ -38,8 +38,8 @@ namespace
 // FIKRetargetProcessor (the same engine the RetargetPoseFromMesh anim node runs per frame) and
 // asserts the TARGET arm behaves:
 //   - ElbowBend: the target forearm/hand articulate at all (regression for the "limp forearm").
-//   - ElbowFidelity: the target elbow's interior angle matches the source's, at rest and bent —
-//     catches wrong-plane retarget-pose offsets and rotation-mode distortion that leave the arm
+//   - ElbowFidelity: the target elbow's interior angle matches the source's, at rest and bent.
+//     Catches wrong-plane retarget-pose offsets and rotation-mode distortion that leave the arm
 //     moving but bent differently than the source.
 //
 // The asset paths are project-specific (OWLVRM4U-Template). When they are absent the tests skip
@@ -76,8 +76,8 @@ namespace VrmRetargetPoseReplayTest
 	}
 
 	// The elbow's local bend axis differs per rig, so try each cardinal axis and keep the one
-	// that displaces the hand the most — callers only need "a visibly bent elbow", not a specific
-	// anatomical direction. Returns the hand displacement (cm) achieved.
+	// that displaces the hand the most (callers only need "a visibly bent elbow", not a specific
+	// anatomical direction). Returns the hand displacement (cm) achieved.
 	static double BuildBentElbowLocalPose(const FReferenceSkeleton& RefSkel, int32 ElbowIdx,
 		int32 HandIdx, float AngleDeg, TArray<FTransform>& OutLocalPose)
 	{
@@ -260,8 +260,8 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 	ToComponentSpaceUnitScale(SrcRef, BentLocalPose, BentSourcePose);
 
 	// The sweep: as-configured asset settings first (this is what runs live and what the
-	// assertions gate), then each FK rotation-mode override on the arm chains — measured via a
-	// per-run FRetargetProfile override, so the asset is never modified.
+	// assertions gate), then each FK rotation-mode override on the arm chains, measured via a
+	// per-run FRetargetProfile override so the asset is never modified.
 	struct FMode { const TCHAR* Label; bool bOverride; EFKChainRotationMode Mode; };
 	const FMode Modes[] = {
 		{ TEXT("AssetConfigured"), false, EFKChainRotationMode::Interpolated },
@@ -321,7 +321,7 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 			return false;
 		}
 
-		// Source ground truth (identical each iteration; cheap to recompute with the indices).
+		// Source ground truth (identical each iteration, cheap to recompute with the indices).
 		const double SrcRestAngle = InteriorElbowAngleDeg(RestSourcePose, SrcShoulderIdx, SrcElbowIdx, SrcHandIdx);
 		const double SrcBentAngle = InteriorElbowAngleDeg(BentSourcePose, SrcShoulderIdx, SrcElbowIdx, SrcHandIdx);
 		const FVector SrcDispBody = ToBodyFrame(RestSourcePose, SrcPelvisIdx, SrcHeadIdx, SrcShoulderIdx, SrcShoulderRIdx,
@@ -349,8 +349,8 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 			M.Label, SrcRestAngle, TgtRestAngle, RestError, SrcBentAngle, TgtBentAngle, BendTransferError, DirErrorDeg));
 
 		// --- Shoulder-raise poses: rotate the SOURCE upper arm (straight elbow) about each
-		// cardinal axis and check that (a) the target elbow STAYS straight — a "phantom" elbow
-		// bend during pure shoulder motion is the wrong-plane failure seen live — and (b) the
+		// cardinal axis and check that (a) the target elbow STAYS straight (a "phantom" elbow
+		// bend during pure shoulder motion is the wrong-plane failure seen live), and (b) the
 		// target upper-arm direction (in body frame) tracks the source's.
 		double WorstPhantomBend = 0.0, WorstUpperArmDirErr = 0.0;
 		for (int32 AxisIdx = 0; AxisIdx < 3; ++AxisIdx)
@@ -382,9 +382,9 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 		}
 
 		// --- Twist-leak probe: rotate the SOURCE upper arm 60 deg about its own bone axis
-		// (the direction to its child elbow, so the elbow/hand positions stay put — a pure
+		// (the direction to its child elbow, so the elbow/hand positions stay put: a pure
 		// wrist-orientation twist like a live tracker produces on an extended arm). A faithful
-		// retarget keeps the target elbow straight and the target hand planted; twist leaking
+		// retarget keeps the target elbow straight and the target hand planted. Twist leaking
 		// into swing (phantom bend / hand travel) is the classic cross-convention failure.
 		{
 			TArray<FTransform> TwistLocal = SrcRef.GetRefBonePose();
@@ -416,7 +416,7 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 			}
 		}
 
-		// Only the as-configured asset settings gate the suite; the overrides are diagnostics.
+		// Only the as-configured asset settings gate the suite. The overrides are diagnostics.
 		if (!M.bOverride)
 		{
 			// 20/30 deg tolerances: proportion differences legitimately shift these a little, but
@@ -439,11 +439,11 @@ bool FVrmVMCRetargetPoseReplayFidelityTest::RunTest(const FString& Parameters)
 
 // Replays the newest live PIE capture (written by UVrmVMCRetargetAnimInstance::CapturePosesForDebug
 // into Saved/VRM4U/PoseCapture_*.txt) through the offline processor and diffs the replayed target
-// pose against the captured LIVE target pose. Pure diagnostic — reports, never fails:
+// pose against the captured LIVE target pose. Pure diagnostic: reports, never fails:
 //   - replayed == captured live  -> the live pipeline is exactly the (proven-good) offline retarget,
 //     so any visual mismatch is already present in the captured SOURCE pose.
 //   - replayed != captured live  -> something between the retarget node and the final pose
-//     (post-process AnimBP, node wiring, profile) is modifying the result; the worst bones say what.
+//     (post-process AnimBP, node wiring, profile) is modifying the result. The worst bones say what.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVrmVMCRetargetCapturedPoseTest,
 	"VRM4U.VMC.RetargetPoseReplay.CapturedPose",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -484,7 +484,7 @@ bool FVrmVMCRetargetCapturedPoseTest::RunTest(const FString& Parameters)
 		}
 		else if (L.StartsWith(TEXT("VRMCAP POSE ")))
 		{
-			// keep the LAST sample of each rig — the pose held when PIE stopped
+			// keep the LAST sample of each rig: the pose held when PIE stopped
 			(L.Contains(TEXT(" source ")) ? SrcPoseLine : TgtPoseLine) = L;
 		}
 	}
@@ -589,7 +589,7 @@ bool FVrmVMCRetargetCapturedPoseTest::RunTest(const FString& Parameters)
 	}
 
 	// Interior elbow angles: does the captured LIVE source even match what the golds showed, and
-	// where does the elbow angle change — in the retarget (replayed) or after it (live final)?
+	// where does the elbow angle change: in the retarget (replayed) or after it (live final)?
 	const auto ReportArm = [&](const TCHAR* Side, const FName& SShoulder, const FName& SElbow, const FName& SHand,
 		const TCHAR* TShoulder, const TCHAR* TElbow, const TCHAR* THand)
 	{
@@ -611,7 +611,7 @@ bool FVrmVMCRetargetCapturedPoseTest::RunTest(const FString& Parameters)
 		TEXT("upperarm_r"), TEXT("lowerarm_r"), TEXT("hand_r"));
 
 	// Upper-arm elevation (deg from straight up; 0 = arms overhead, 90 = horizontal): shows how
-	// much of the source's arm raise reaches the target — the shoulder-chain transfer metric.
+	// much of the source's arm raise reaches the target, the shoulder-chain transfer metric.
 	const auto ElevFromUp = [](const TArray<FTransform>& Pose, int32 ShoulderIdx, int32 ElbowIdx)
 	{
 		const FVector Dir = (Pose[ElbowIdx].GetLocation() - Pose[ShoulderIdx].GetLocation()).GetSafeNormal();

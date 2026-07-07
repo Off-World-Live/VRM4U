@@ -19,11 +19,8 @@ class STextBlock;
  * Holds a weak pointer to the rig component. Self-refreshes from the BP
  * library on every fast tick driven by the parent panel.
  *
- * Coordinate convention: the panel exposes rotations as Unreal FRotator
- * (Pitch/Yaw/Roll degrees) and converts to FQuat at the BP boundary via
- * FRotator::Quaternion. Last-applied display goes the other way via
- * FQuat::Rotator. This is the natural UE convention and matches what users
- * see in editor detail panels.
+ * Rotations are exposed as FRotator degrees and converted to FQuat at the BP
+ * boundary (last-applied display goes the other way), matching the UE editor.
  */
 class SVrmVMCBoneRow : public SCompoundWidget
 {
@@ -44,12 +41,10 @@ public:
 	// BP library and updates the displayed text. Does not rebuild widgets.
 	void RefreshValues();
 
-	// The bone is "active" if it has any of: pre override, post override, or mask.
-	// Parent panel uses this for the "Active only" filter without re-querying.
+	// Backs the parent panel's "Active only" filter without re-querying.
 	bool IsActive() const { return bPreOverridden || bPostOverridden || bMasked; }
 
-	// Returns true if the bone name passes the current search filter. Empty
-	// filter passes everything. Case-insensitive substring match.
+	// Case-insensitive substring match; empty filter passes everything.
 	bool MatchesFilter(const FString& FilterText) const;
 
 	FName GetHumanoidName() const { return HumanoidName; }

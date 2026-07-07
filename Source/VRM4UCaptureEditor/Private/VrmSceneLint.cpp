@@ -61,7 +61,7 @@ namespace
 			{
 				return true;
 			}
-			// FAnimNode_LinkedAnimLayer derives from FAnimNode_LinkedAnimGraph; both expose InstanceClass.
+			// FAnimNode_LinkedAnimLayer derives from FAnimNode_LinkedAnimGraph. Both expose InstanceClass.
 			if (CDO != nullptr && Property->Struct->IsChildOf(FAnimNode_LinkedAnimGraph::StaticStruct()))
 			{
 				const FAnimNode_LinkedAnimGraph* Linked = Property->ContainerPtrToValuePtr<FAnimNode_LinkedAnimGraph>(CDO);
@@ -93,7 +93,7 @@ namespace
 	}
 
 	// The direct VMC path breaks when the bind pose differs from the source's T-pose (the
-	// A-pose MetaHuman/DAZ failure); a T-pose bind (Mixamo) tracks 1:1. Measure the bind
+	// A-pose MetaHuman/DAZ failure). A T-pose bind (Mixamo) tracks 1:1. Measure the bind
 	// arm elevation instead of guessing by rig family.
 	// Returns +1 (T-pose-ish), -1 (A-pose / lowered arms), 0 (arm bones not found).
 	int32 ClassifyBindArmPose(USkeletalMesh* Mesh)
@@ -187,7 +187,7 @@ namespace
 		}
 
 		// Chain-mapping coverage, judged on the best-mapped op and by SUBSTRING, not exact
-		// standard names: hand-built rigs legitimately use LeftShoulder-style names — what
+		// standard names: hand-built rigs legitimately use LeftShoulder-style names. What
 		// breaks mocap is a missing PAIR, not a nonstandard name.
 		{
 			const FRetargetChainMapping* BestMapping = nullptr;
@@ -259,7 +259,7 @@ namespace
 							TEXT("Add/map the chain on both rigs (RTG chain panel -> Auto-Map Chains), or recreate via the setup wizard.")));
 					}
 				}
-				// Clavicle carries ~half of a full arm raise from XR Animator; without a
+				// Clavicle carries ~half of a full arm raise from XR Animator. Without a
 				// mapped chain the arms stop ~50 degrees short of overhead.
 				if (!HasMappedChainContaining({ TEXT("Clavicle"), TEXT("Shoulder") }))
 				{
@@ -305,7 +305,7 @@ TArray<FVrmSceneLintFinding> UVrmSceneLint::LintComponent(USkeletalMeshComponent
 
 	// Direct VMC node on a non-VRM rig: the exact broken path of the MetaHuman/DAZ
 	// investigation. The node's legacy rebase assumes a T-pose-like bind, so measure the
-	// actual bind arm elevation: a T-pose rig (Mixamo — our gold standard) merely gets a
+	// actual bind arm elevation: a T-pose rig (Mixamo, our gold standard) merely gets a
 	// heads-up, an A-pose rig (MetaHuman/DAZ) is visibly broken.
 	const UClass* AnimClass = Component->GetAnimClass();
 	if (!bIsNativeVrm && AnimClassContainsVmcNode(AnimClass))
@@ -325,7 +325,7 @@ TArray<FVrmSceneLintFinding> UVrmSceneLint::LintComponent(USkeletalMeshComponent
 	}
 
 	// VMC node inside a post-process AnimBP: runs after the main instance on every
-	// instance of that MESH asset - never intended, and it fights the main graph.
+	// instance of that MESH asset. Never intended, and it fights the main graph.
 	if (const UClass* PostProcessClass = Mesh->GetPostProcessAnimBlueprint())
 	{
 		if (AnimClassContainsVmcNode(PostProcessClass))
@@ -339,7 +339,7 @@ TArray<FVrmSceneLintFinding> UVrmSceneLint::LintComponent(USkeletalMeshComponent
 	// -- VMC face bridge checks: a MetaHuman face riding on a VMC-driven body --
 	// The double gap the 2026-07 face investigation found: the VMC node cannot reach the
 	// separate face component, and the face is RigLogic-driven anyway. The supported path
-	// is the VMC -> LiveLink ARKit bridge; flag actors that are half-wired.
+	// is the VMC to LiveLink ARKit bridge. Flag actors that are half-wired.
 	{
 		const USkeleton* Skeleton = Mesh->GetSkeleton();
 		AActor* Owner = Component->GetOwner();
@@ -401,8 +401,8 @@ TArray<FVrmSceneLintFinding> UVrmSceneLint::LintComponent(USkeletalMeshComponent
 	// Asset-level checks for whatever retargeter targets this mesh.
 	LintRetargeterAssets(Mesh, Label, Findings);
 
-	// An RTG for this mesh exists but the component isn't using the retarget instance -
-	// someone did the asset work and missed the level wiring.
+	// An RTG for this mesh exists but the component isn't using the retarget instance.
+	// Someone did the asset work and missed the level wiring.
 	if (!bIsNativeVrm &&
 		UVrmRetargetSetupUtil::FindRetargeterTargetingMesh(Mesh) != nullptr &&
 		(AnimClass == nullptr || !AnimClass->IsChildOf(UVrmVMCRetargetAnimInstance::StaticClass())))
