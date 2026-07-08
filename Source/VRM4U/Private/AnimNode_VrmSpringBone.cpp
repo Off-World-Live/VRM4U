@@ -1,4 +1,4 @@
-﻿// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+﻿// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 
 /*
@@ -297,17 +297,7 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 				FTransform t2 = t;
 				t2.AddToTranslation(tail);
 
-				if (0) {
-					// sphere and line
-					DrawWireSphere(PDI, t1, FLinearColor(1, 1, 1), r, 32, Priority);
-					DrawWireSphere(PDI, t2, FLinearColor::Green, r, 32, Priority);
-					PDI->DrawLine(
-						t1.GetLocation(),
-						t2.GetLocation(),
-						FLinearColor::Green,
-						Priority);
-				}
-				else {
+				{
 					// capsule
 					FVector center = (t1.GetLocation() + t2.GetLocation()) / 2.f;
 					FVector Up = (t1.GetLocation() - t2.GetLocation()).GetSafeNormal();
@@ -388,8 +378,8 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 		TArray<SData> dataList;
 		TArray<int32> boneList;
 
-		for (const auto spr : MetaObjectLocal->VRMSpringMeta) {
-			for (const auto boneName : spr.boneNames) {
+		for (const auto &spr : MetaObjectLocal->VRMSpringMeta) {
+			for (const auto &boneName : spr.boneNames) {
 				int32_t boneIndex = PreviewSkelMeshComp->GetBoneIndex(*boneName);
 				boneList.AddUnique(boneIndex);
 
@@ -405,7 +395,7 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 					TArray<int32> c;
 					VRMUtil::GetDirectChildBones(VRMGetRefSkeleton( VRMGetSkinnedAsset(PreviewSkelMeshComp) ), boneList[i], c);
 					if (c.Num()) {
-						for (const auto cc : c) {
+						for (const auto &cc : c) {
 							boneList.AddUnique(cc);
 
 							SData s;

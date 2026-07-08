@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #pragma once
 
@@ -71,7 +71,9 @@ public:
 	bool ValidateSchema();
 
 	bool ConvertTextureAndMaterial(UVrmAssetListObject *vrmAssetList);
-	bool ConvertModel(UVrmAssetListObject *vrmAssetList);
+	bool ConvertModel(UVrmAssetListObject* vrmAssetList);
+	bool ConvertModel_internal(UVrmAssetListObject* vrmAssetList);
+	bool ConvertModel_internal_description(UVrmAssetListObject* vrmAssetList);
 	bool ConvertMorphTarget(UVrmAssetListObject *vrmAssetList);
 
 	void GetVRMMeta(const aiScene *mScenePtr, UVrmLicenseObject *& a, UVrm1LicenseObject *& b);

@@ -63,7 +63,6 @@ private:
 	TMap<FString, float> CurveDataBuffer;
 	bool bPendingUpdate = false;
 
-	// Helper method to flush buffered data
 	void FlushBufferedData(bool bForceFlush);
 
 public:
@@ -74,6 +73,12 @@ public:
 	// Simplified performance settings - set by AnimNode
 	float UpdateThrottleTime = 1.0f / 60.0f;
 	bool bAdaptiveThrottling = false;
+
+	// Packet arrival timestamp. Bumped on every received VMC OSC message
+	// before any throttle logic, so this reflects true wire-level liveness
+	// independent of the throttled flush cadence. 0.0 means no packet has
+	// ever been received on this server.
+	double LastPacketReceivedTime = 0.0;
 
 	void CreateServer(FString name, uint16 port);
 	void DestroyServer();

@@ -1,6 +1,6 @@
 ﻿// Copyright 1998-2018 Epic Games, Inc. All Rights Reserved.
 // The code associated with the initialization of the mesh is based on the Engine source.
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 
 #include "VrmConvertModel.h"
@@ -203,22 +203,6 @@ static void FindMeshInfo(const aiScene* scene, aiNode* node, FReturnedData& resu
 		bool bSkin = true;
 		if (mesh->mNumBones == 0) {
 			bSkin = false;
-		}
-
-		if (0) {
-			int m = mesh->mNumVertices;
-			mi.Vertices.Reserve(m);
-			mi.Normals.Reserve(m);
-
-			if (mesh->HasVertexColors(0)) {
-				mi.VertexColors.Reserve(m);
-			}
-			if (mesh->HasTangentsAndBitangents()) {
-				mi.Tangents.Reserve(m);
-			}
-			if (mesh->HasTextureCoords(0)) {
-				mi.UV0.Reserve(m);
-			}
 		}
 
 		//transform.
@@ -607,7 +591,19 @@ static void CreateSwingHead(UVrmAssetListObject *vrmAssetList, VRM::VRMSpring &s
 	}
 }
 
-bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
+bool VRMConverter::ConvertModel(UVrmAssetListObject* vrmAssetList) {
+
+
+#if	UE_VERSION_OLDER_THAN(5,8,0)
+	return ConvertModel_internal(vrmAssetList);
+#else
+	return ConvertModel_internal_description(vrmAssetList);
+#endif
+
+}
+
+bool VRMConverter::ConvertModel_internal(UVrmAssetListObject *vrmAssetList) {
+
 	if (vrmAssetList == nullptr) {
 		return false;
 	}

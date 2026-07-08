@@ -1,4 +1,6 @@
-> **Off World Live Fork:** This is a fork of [VRM4U](https://github.com/ruyo/VRM4U) with extended support for non-VRM skeletons. See our [Wiki](https://github.com/Off-World-Live/VRM4U/wiki).
+> **Off World Live Fork:** This is a fork of [VRM4U](https://github.com/ruyo/VRM4U) with extended support for non-VRM skeletons (MetaHuman, DAZ, Mixamo) and live VMC mocap. See our [Wiki](https://github.com/Off-World-Live/VRM4U/wiki).
+>
+> **Fork features (UE 5.6):** live VMC mocap with automatic bone mapping, one-click IK Retargeter setup for MetaHuman and DAZ, a VMC-to-LiveLink face bridge for MetaHuman faces, a live tuning panel, and a Blueprint API. Full guide: **[`docs/vmc-guide.md`](docs/vmc-guide.md)**.
 
 # VRM4U
 
@@ -102,6 +104,21 @@ VRM4Uの開発を支援したい という奇特な方は[こちら](https://ruy
 ありがとうございます。
 
 ### リリース履歴
+- 2026/05/14
+    - UE5.8Previewに対応
+    - インポート時のValidationチェックをスキップできるようにした
+    - インポート時のマテリアルマージをOFFにした
+- 2026/02/19
+    - AndroidのPKG作成でエラーが出るのを対処
+- 2026/02/14
+    - 画面キャプチャの対象を、ゲーム画面のみにした
+    - 対象モデルを2パス描画する仕組みを追加
+    - SceneViewExtensionの登録タイミングを変更、lyraに導入するとクラッシュするのを修正
+- 2026/01/01
+    - 法線補正の方法を変更、デフォルト値を調整した
+    - IKRigの設定をUE5.7に合わせた
+    - サムネイルに文字が表示されないのを修正
+    - Linuxビルドエラーを修正
 - 2025/11/13
     - マテリアル一括生成ツールを追加
     - VRM Validationをランタイム時も有効化

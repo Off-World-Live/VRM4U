@@ -23,6 +23,11 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 
 private:
-	/** Handle auto-populate button click */
-	FReply OnAutoPopulateClicked(UVrmMetaObject* MetaObject);
+	/** Handle auto-populate button click. MetaObject is held weakly: the asset can
+	 *  be GC'd/closed between layout and click. */
+	FReply OnAutoPopulateClicked(TWeakObjectPtr<UVrmMetaObject> MetaObjectWeak);
+
+	/** Cached during CustomizeDetails so the click handler can force a refresh of the
+	 *  details panel after populating (valid for the lifetime of this customization). */
+	IDetailLayoutBuilder* CachedDetailBuilder = nullptr;
 };

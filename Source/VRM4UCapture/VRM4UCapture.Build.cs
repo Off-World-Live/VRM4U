@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 using UnrealBuildTool;
 
@@ -17,6 +17,12 @@ public class VRM4UCapture : ModuleRules
                 "Sockets",
 				"OSC",
 				"AnimGraphRuntime",
+
+				// Engine-core Runtime module (NOT the LiveLink plugin): types + the
+				// modular-feature handle for the VMC->LiveLink face bridge. The actual
+				// client is resolved at runtime and its absence is handled gracefully,
+				// so projects without the LiveLink plugin lose only the face bridge.
+				"LiveLinkInterface",
 
 				"VRM4U",
             });
@@ -37,8 +43,6 @@ public class VRM4UCapture : ModuleRules
 
         PrivateIncludePaths.AddRange(
         new string[] {
-			// Relative to Engine\Plugins\Runtime\Oculus\OculusVR\Source
-			//"../Runtime/Renderer/Private",
         });
     }
 }

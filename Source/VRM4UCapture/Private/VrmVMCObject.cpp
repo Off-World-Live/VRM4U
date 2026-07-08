@@ -20,7 +20,6 @@ void UVrmVMCObject::DestroyServer()
 	}
 	OSCServer.Reset(nullptr);
 
-	// Clear all data when server is destroyed
 	{
 		FScopeLock lock(&cs);
 		VMCData.ClearData();
@@ -41,12 +40,17 @@ void UVrmVMCObject::CreateServer(FString inName, uint16 inPort)
 #else
 	OSCServer.Reset(UOSCManager::CreateOSCServer(ServerName, port, true, true, FString(), this));
 
-	OSCServer->OnOscMessageReceivedNative.RemoveAll(nullptr);
-	OSCServer->OnOscMessageReceivedNative.AddUObject(this, &UVrmVMCObject::OSCReceivedMessageEvent);
+	// CreateOSCServer returns null if the port is already bound (e.g. another VMC
+	// receiver on the same port). Guard before binding/ticking to avoid a null deref.
+	if (OSCServer.IsValid())
+	{
+		OSCServer->OnOscMessageReceivedNative.RemoveAll(nullptr);
+		OSCServer->OnOscMessageReceivedNative.AddUObject(this, &UVrmVMCObject::OSCReceivedMessageEvent);
 
 #if WITH_EDITOR
-	OSCServer->SetTickInEditor(true);
+		OSCServer->SetTickInEditor(true);
 #endif // WITH_EDITOR
+	}
 #endif
 }
 
@@ -55,13 +59,15 @@ void UVrmVMCObject::OSCReceivedMessageEvent(const FOSCMessage& Message, const FS
 	FOSCAddress a = UOSCManager::GetOSCMessageAddress(Message);
 	FString addressPath = UOSCManager::GetOSCAddressFullPath(a);
 
-	// Early exit for non-VMC messages - major performance improvement
+	// Early exit for non-VMC messages, before any parsing.
 	if (!addressPath.StartsWith(TEXT("/VMC/Ext/")))
 	{
 		return;
 	}
 
-	// Process bone/root position messages
+	// Wire-level liveness timestamp, used by debug tooling.
+	LastPacketReceivedTime = FPlatformTime::Seconds();
+
 	if (addressPath == TEXT("/VMC/Ext/Root/Pos") || addressPath == TEXT("/VMC/Ext/Bone/Pos"))
 	{
 		TArray<FString> str;
@@ -80,12 +86,10 @@ void UVrmVMCObject::OSCReceivedMessageEvent(const FOSCMessage& Message, const FS
 				t.SetScale3D(FVector(curve[7], curve[9], curve[8]));
 			}
 
-			// Store in buffer instead of immediate processing
 			BoneDataBuffer.FindOrAdd(str[0]) = t;
 			bPendingUpdate = true;
 		}
 	}
-	// Process blend shape values
 	else if (addressPath == TEXT("/VMC/Ext/Blend/Val"))
 	{
 		TArray<FString> str;
@@ -95,17 +99,15 @@ void UVrmVMCObject::OSCReceivedMessageEvent(const FOSCMessage& Message, const FS
 
 		if (str.Num() > 0 && curve.Num() >= 1)
 		{
-			// Store in buffer instead of immediate processing
 			CurveDataBuffer.FindOrAdd(str[0]) = curve[0];
 			bPendingUpdate = true;
 		}
 	}
-	// Frame completion messages - these trigger immediate updates
+	// Frame-completion messages flush the buffer immediately.
 	else if (addressPath == TEXT("/VMC/Ext/OK") ||
 		addressPath == TEXT("/VMC/Ext/T") ||
 		addressPath == TEXT("/VMC/Ext/Blend/Apply"))
 	{
-		// Force flush all buffered data on frame completion
 		FlushBufferedData(true);
 	}
 }
@@ -119,7 +121,6 @@ void UVrmVMCObject::FlushBufferedData(bool bForceFlush)
 	float CurrentTime = FPlatformTime::Seconds();
 	float CurrentThrottleTime = UpdateThrottleTime;
     
-	// Handle adaptive throttling if enabled
 	if (bAdaptiveThrottling && !bForceFlush) {
 		static float LastFrameTime = 0.0f;
 		float FrameDelta = CurrentTime - LastFrameTime;
@@ -131,7 +132,7 @@ void UVrmVMCObject::FlushBufferedData(bool bForceFlush)
 		} else if (FrameDelta < ADAPTIVE_THROTTLE_FAST_TIME) {
 			CurrentThrottleTime = ADAPTIVE_THROTTLE_HIGH_PERFORMANCE_TIME;  // System performing well
 		} else {
-			CurrentThrottleTime = UpdateThrottleTime; // Use base rate
+			CurrentThrottleTime = UpdateThrottleTime;
 		}
 	}
 
@@ -145,19 +146,17 @@ void UVrmVMCObject::FlushBufferedData(bool bForceFlush)
 	{
 		FScopeLock lock(&cs);
 
-		// Batch update bone data
 		for (const auto& BonePair : BoneDataBuffer)
 		{
 			VMCData.BoneData.FindOrAdd(BonePair.Key) = BonePair.Value;
 		}
 
-		// Batch update curve data
 		for (const auto& CurvePair : CurveDataBuffer)
 		{
 			VMCData.CurveData.FindOrAdd(CurvePair.Key) = CurvePair.Value;
 		}
 
-		// Update cache - this is the expensive operation, so do it less frequently
+		// Refresh the read cache: the expensive copy, so do it less frequently.
 		VMCData_Cache = VMCData;
 	}
 
@@ -170,7 +169,7 @@ void UVrmVMCObject::FlushBufferedData(bool bForceFlush)
 
 void UVrmVMCObject::Tick(float DeltaTime)
 {
-	// Handle any pending buffered updates that haven't been flushed by frame completion messages
+	// Flush updates not already flushed by a frame-completion message.
 	if (bPendingUpdate && bForceUpdate)
 	{
 		FlushBufferedData(false);
@@ -190,7 +189,6 @@ void UVrmVMCObject::ClearVMCData()
 	VMCData.ClearData();
 	VMCData_Cache.ClearData();
 
-	// Also clear buffers
 	BoneDataBuffer.Empty();
 	CurveDataBuffer.Empty();
 	bPendingUpdate = false;

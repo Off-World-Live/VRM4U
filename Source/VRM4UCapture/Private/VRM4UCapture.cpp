@@ -1,27 +1,29 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #include "VRM4UCapture.h"
 #include "CoreMinimal.h"
 #include "VRM4UCaptureLog.h"
 #include "Modules/ModuleManager.h"
 #include "Internationalization/Internationalization.h"
+#include "OWLVrmVMCNodeRegistry.h"
 
 #define LOCTEXT_NAMESPACE "VRM4UMisc"
 
 DEFINE_LOG_CATEGORY(LogVRM4UCapture);
 
 //////////////////////////////////////////////////////////////////////////
-// FSpriterImporterModule
 
 class FVRM4UCaptureModule : public FDefaultModuleImpl
 {
 public:
 	virtual void StartupModule() override
 	{
+		FOWLVrmVMCNodeRegistry::Initialize();
 	}
 
 	virtual void ShutdownModule() override
 	{
+		FOWLVrmVMCNodeRegistry::Shutdown();
 	}
 };
 

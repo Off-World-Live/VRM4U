@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 using UnrealBuildTool;
 using System.IO;
@@ -47,12 +47,20 @@ public class VRM4ULoader : ModuleRules
 			});
 		PrivateDependencyModuleNames.Add("TimeManagement");
 
+		BuildVersion Version;
+		BuildVersion.TryRead(BuildVersion.GetDefaultFileName(), out Version);
+
+		if (Version.MajorVersion == 5 && Version.MinorVersion >= 8)
+		{
+			PrivateDependencyModuleNames.Add("MeshDescription");
+			PrivateDependencyModuleNames.Add("StaticMeshDescription");
+			PrivateDependencyModuleNames.Add("SkeletalMeshDescription");
+		}
+
 		if (Target.bBuildEditor) {
 			PrivateDependencyModuleNames.Add("Persona");
 		}
 
-		BuildVersion Version;
-		if (BuildVersion.TryRead(BuildVersion.GetDefaultFileName(), out Version))
 		{
 			//if (Version.MajorVersion == X && Version.MinorVersion == Y)
 			if (Version.MajorVersion == 5)

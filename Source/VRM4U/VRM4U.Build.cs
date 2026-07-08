@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 using UnrealBuildTool;
 using System.IO;
@@ -45,6 +45,7 @@ public class VRM4U : ModuleRules
                 "RenderCore",
                 "AnimGraphRuntime",
 				"LiveLinkInterface",
+				"CinematicCamera",
 
                 // ... add other public dependencies that you statically link with here ...
 			}
@@ -58,7 +59,6 @@ public class VRM4U : ModuleRules
 				"SlateCore",
                 "Engine",
 				"AssetRegistry",
-				"CinematicCamera",
 				"InputCore",
 				"ControlRig",
 				"AnimationCore",

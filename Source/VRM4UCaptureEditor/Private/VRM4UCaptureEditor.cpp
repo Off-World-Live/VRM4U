@@ -1,4 +1,4 @@
-// VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
+// VRM4U Copyright (c) 2021-2026 Haruyoshi Yamamoto. This software is released under the MIT License.
 
 #include "VRM4UCaptureEditor.h"
 #include "CoreMinimal.h"
@@ -8,6 +8,8 @@
 #include "PropertyEditorModule.h"
 #include "VrmMetaObject.h"
 #include "VrmMetaObjectCustomization.h"
+#include "VrmVMCDebugTabSpawner.h"
+#include "VrmRetargetSetupMenuExtension.h"
 
 #define LOCTEXT_NAMESPACE "VRM4UCapture"
 
@@ -15,25 +17,31 @@ DEFINE_LOG_CATEGORY(LogVRM4UCaptureEditor);
 
 void FVRM4UCaptureEditorModule::StartupModule()
 {
-	// Register detail customization
+	UE_LOG(LogVRM4UCaptureEditor, Warning, TEXT("[VRM4UCaptureEditor] StartupModule ENTERED"));
+
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName(), 
-		FOnGetDetailCustomizationInstance::CreateStatic(&FVrmMetaObjectCustomization::MakeInstance));
-    
-	// Notify that the module has been loaded
+	PropertyModule.RegisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName(),
+	                                         FOnGetDetailCustomizationInstance::CreateStatic(
+		                                         &FVrmMetaObjectCustomization::MakeInstance));
+
+	FVrmVMCDebugTabSpawner::Register();
+	FVrmRetargetSetupMenuExtension::Register();
+
 	UE_LOG(LogVRM4UCaptureEditor, Log, TEXT("VRM4UCaptureEditor module has started"));
 }
 
 void FVRM4UCaptureEditorModule::ShutdownModule()
 {
-	// Unregister detail customization
+	FVrmRetargetSetupMenuExtension::Unregister();
+	FVrmVMCDebugTabSpawner::Unregister();
+
 	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
-		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(
+			"PropertyEditor");
 		PropertyModule.UnregisterCustomClassLayout(UVrmMetaObject::StaticClass()->GetFName());
 	}
-    
-	// Notify that the module has been unloaded
+
 	UE_LOG(LogVRM4UCaptureEditor, Log, TEXT("VRM4UCaptureEditor module has been shut down"));
 }
 
